@@ -1,0 +1,148 @@
+{
+  "projectType": "saas",
+  "projectName": "Balatro Mod Manager",
+  "projectDescription": "A cross-platform desktop application for easily finding, downloading, and installing mods for the Balatro game.",
+  "theme": "almond",
+  "primaryColor": "#fa9323",
+  "lightColor": "#3f6c81",
+  "darkColor": "#b3b2b2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Get Started",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "introduction",
+              "installation"
+            ]
+          },
+          {
+            "group": "Quick Start",
+            "pages": [
+              "quickstart",
+              "first-mod"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "User Guide",
+        "groups": [
+          {
+            "group": "Core Features",
+            "pages": [
+              "guide/browsing-mods",
+              "guide/installing-mods",
+              "guide/managing-mods",
+              "guide/mod-collections"
+            ]
+          },
+          {
+            "group": "Advanced Features",
+            "pages": [
+              "guide/backups",
+              "guide/lovely-injector",
+              "guide/launch-modes",
+              "guide/local-mods"
+            ]
+          },
+          {
+            "group": "Settings",
+            "pages": [
+              "guide/settings",
+              "guide/discord-integration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Advanced",
+        "groups": [
+          {
+            "group": "Platform Support",
+            "pages": [
+              "platform/windows",
+              "platform/macos",
+              "platform/linux",
+              "platform/steam-deck"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/common-issues",
+              "troubleshooting/logs",
+              "troubleshooting/reporting-bugs"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "dev/architecture",
+              "dev/building",
+              "dev/contributing",
+              "dev/testing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Library",
+            "pages": [
+              "api/database",
+              "api/installer",
+              "api/finder",
+              "api/lovely"
+            ]
+          },
+          {
+            "group": "Tauri Commands",
+            "pages": [
+              "api/commands/install",
+              "api/commands/paths",
+              "api/commands/settings",
+              "api/commands/mods"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Browse and search mod catalog with thumbnails and descriptions",
+    "One-click mod installation and uninstallation",
+    "Automatic dependency resolution and management",
+    "Backup and restore mod configurations",
+    "Curated mod collections for easy setup",
+    "Discord Rich Presence integration",
+    "Lovely mod loader integration and updates",
+    "Cross-platform support (Windows, macOS, Linux, Steam Deck)",
+    "Local mod detection and import",
+    "Multiple launch modes (vanilla/modded)"
+  ],
+  "publicApiSurface": [
+    "Database::new() - Initialize SQLite database",
+    "installer::install_mod() - Install a mod from repository",
+    "installer::uninstall_mod() - Remove an installed mod",
+    "finder::find_balatro_path() - Auto-detect Balatro installation",
+    "lovely::install_lovely() - Install Lovely mod loader",
+    "lovely::check_lovely_update() - Check for Lovely updates",
+    "local_mod_detection::scan_mods_folder() - Detect local mods",
+    "backup::create_backup() - Create mod configuration backup",
+    "backup::restore_backup() - Restore from backup",
+    "discord_rpc::DiscordRpcManager - Discord Rich Presence manager",
+    "cache::fetch_mod_index() - Fetch remote mod catalog",
+    "smods_installer::install_steamodded() - Install Steamodded framework",
+    "mod_collections::load_collection() - Load curated mod collection",
+    "commands::install::install_mod - Tauri command for mod installation",
+    "commands::paths::find_steam_balatro - Tauri command to find Steam installation",
+    "commands::settings::set_launch_mode - Tauri command to set launch mode",
+    "commands::backup::create_backup - Tauri command for backup creation",
+    "commands::mods::toggle_mod_enabled - Tauri command to enable/disable mods"
+  ]
+}
