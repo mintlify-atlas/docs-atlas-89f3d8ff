@@ -1,0 +1,710 @@
+---
+title: Testing Guide
+description: How to run and write tests for Balatro Mod Manager
+---
+
+## Overview
+
+Balatro Mod Manager uses different testing strategies for frontend and backend code:
+
+<CardGroup cols={2}>
+  <Card title="Backend (Rust)" icon="gear">
+    - Unit tests with `#[test]`
+    - Integration tests per crate
+    - Cargo test framework
+    - SQLite database testing
+  </Card>
+  <Card title="Frontend (TypeScript)" icon="window">
+    - Vitest test runner
+    - Testing Library (Svelte)
+    - Type checking with `svelte-check`
+    - Limited formal unit tests
+  </Card>
+</CardGroup>
+
+## Running Tests
+
+### Complete Test Suite
+
+Run all tests across the entire project:
+
+```bash
+task check
+```
+
+This comprehensive command runs:
+1. Frontend type checking (`bun run check`)
+2. Frontend linting (`bun run lint`)
+3. Frontend tests (`bun run test`)
+4. Rust format verification (`cargo fmt --check`)
+5. Rust linting (`cargo clippy`)
+6. Rust tests for both crates (`cargo test`)
+
+### Backend Tests Only
+
+<Warning>
+  **Critical**: Tests must run with `--test-threads=1` to avoid SQLite database lock conflicts.
+</Warning>
+
+Run all Rust tests:
+
+```bash
+task test
+```
+
+This runs tests for both crates:
+- `balatro-mod-manager` (main Tauri app)
+- `bmm-lib` (core library)
+
+#### Testing Individual Crates
+
+<CodeGroup>
+```bash Main Crate
+cd src-tauri
+cargo test -q -- --test-threads=1
+```
+
+```bash Library Crate
+cd src-tauri/bmm-lib
+cargo test -q -- --test-threads=1
+```
+
+```bash Specific Test
+cargo test test_install_mod -- --test-threads=1
+```
+
+```bash Verbose Output
+cargo test -- --test-threads=1 --nocapture
+```
+</CodeGroup>
+
+### Frontend Tests Only
+
+<CodeGroup>
+```bash Run Once
+bun run test
+```
+
+```bash Watch Mode
+bun run test:watch
+```
+
+```bash With Coverage
+bun run test:coverage
+```
+</CodeGroup>
+
+<Info>
+  **Type Checking**: Frontend primarily relies on TypeScript type checking rather than extensive unit tests:
+  
+  ```bash
+  bun run check
+  ```
+</Info>
+
+## Backend Testing (Rust)
+
+### Test Organization
+
+<Steps>
+  <Step title="Unit Tests">
+    Tests live beside the code in `#[cfg(test)]` modules:
+    
+    ```rust
+    // src-tauri/bmm-lib/src/installer.rs
+    
+    pub fn install_mod(mod_id: &str) -> Result<(), InstallError> {
+        // Implementation
+    }
+    
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        
+        #[test]
+        fn test_install_mod_creates_directory() {
+            // Test implementation
+        }
+        
+        #[test]
+        fn test_install_mod_handles_errors() {
+            // Test implementation
+        }
+    }
+    ```
+  </Step>
+  <Step title="Integration Tests">
+    Located in `tests/` directory within each crate:
+    
+    ```
+    src-tauri/bmm-lib/
+    ├── src/
+    │   ├── database.rs
+    │   └── installer.rs
+    └── tests/
+        ├── integration_test.rs
+        └── database_test.rs
+    ```
+  </Step>
+  <Step title="Shared Test Helpers">
+    Common test utilities in project root `tests/` directory.
+  </Step>
+</Steps>
+
+### Database Testing
+
+<Warning>
+  **SQLite Lock Prevention**: Database tests require `--test-threads=1` because SQLite doesn't handle concurrent writes well in test environments.
+</Warning>
+
+#### Example Database Test
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+    
+    #[test]
+    fn test_database_creates_tables() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("test.db");
+        
+        let db = Database::new(&db_path).unwrap();
+        
+        // Verify tables exist
+        let tables = db.get_tables().unwrap();
+        assert!(tables.contains(&"mods".to_string()));
+        assert!(tables.contains(&"settings".to_string()));
+    }
+    
+    #[test]
+    fn test_database_migration() {
+        // Test schema migration logic
+    }
+}
+```
+
+### Test Naming Conventions
+
+Use descriptive `snake_case` names that explain what is being tested:
+
+<CodeGroup>
+```rust Good Examples
+#[test]
+fn test_install_mod_creates_directory() { }
+
+#[test]
+fn test_install_mod_handles_missing_file() { }
+
+#[test]
+fn test_detect_steam_path_on_windows() { }
+
+#[test]
+fn test_parse_mod_metadata_with_invalid_json() { }
+```
+
+```rust Avoid
+#[test]
+fn test1() { }  // Not descriptive
+
+#[test]
+fn it_works() { }  // Too vague
+
+#[test]
+fn TestInstall() { }  // Wrong case
+```
+</CodeGroup>
+
+### Using rstest for Parameterized Tests
+
+The project supports `rstest` for table-driven tests:
+
+```rust
+use rstest::rstest;
+
+#[rstest]
+#[case("/valid/path", true)]
+#[case("/invalid/path", false)]
+#[case("", false)]
+fn test_validate_path(#[case] input: &str, #[case] expected: bool) {
+    assert_eq!(validate_path(input), expected);
+}
+```
+
+### Test Focus Areas
+
+<Info>
+  Prioritize testing these areas:
+</Info>
+
+<CardGroup cols={2}>
+  <Card title="Core Logic" icon="brain">
+    - Mod installation/uninstallation
+    - Path detection algorithms
+    - Mod loader integration
+    - Dependency resolution
+  </Card>
+  <Card title="I/O Operations" icon="folder">
+    - File reading/writing
+    - Database operations
+    - Network requests
+    - Archive extraction
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation">
+    - Invalid inputs
+    - Missing files
+    - Database errors
+    - Network failures
+  </Card>
+  <Card title="Platform-Specific" icon="computer">
+    - Windows path handling
+    - macOS permissions
+    - Linux Flatpak sandbox
+    - Steam detection
+  </Card>
+</CardGroup>
+
+## Frontend Testing (TypeScript)
+
+### Test Framework
+
+The frontend uses Vitest with Testing Library for Svelte:
+
+```json
+// package.json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18",
+    "@testing-library/svelte": "^5.3.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "happy-dom": "^20.6.3"
+  }
+}
+```
+
+### Example Frontend Test
+
+```typescript
+// src/stores/ui.test.ts
+import { describe, it, expect, beforeEach } from 'vitest';
+import { get } from 'svelte/store';
+import { uiStore } from './ui';
+
+describe('UI Store', () => {
+  beforeEach(() => {
+    // Reset store state
+    uiStore.set({
+      sidebarOpen: false,
+      viewMode: 'grid'
+    });
+  });
+  
+  it('toggles sidebar state', () => {
+    const initial = get(uiStore);
+    expect(initial.sidebarOpen).toBe(false);
+    
+    // Toggle sidebar
+    uiStore.update(s => ({ ...s, sidebarOpen: true }));
+    
+    const updated = get(uiStore);
+    expect(updated.sidebarOpen).toBe(true);
+  });
+  
+  it('changes view mode', () => {
+    uiStore.update(s => ({ ...s, viewMode: 'list' }));
+    
+    const state = get(uiStore);
+    expect(state.viewMode).toBe('list');
+  });
+});
+```
+
+### Testing Svelte Components
+
+```typescript
+import { render, screen } from '@testing-library/svelte';
+import { describe, it, expect } from 'vitest';
+import ModCard from '../components/ModCard.svelte';
+
+describe('ModCard Component', () => {
+  it('renders mod information', () => {
+    const mod = {
+      id: 'test-mod',
+      name: 'Test Mod',
+      author: 'Test Author',
+      description: 'A test mod'
+    };
+    
+    render(ModCard, { props: { mod } });
+    
+    expect(screen.getByText('Test Mod')).toBeInTheDocument();
+    expect(screen.getByText('Test Author')).toBeInTheDocument();
+  });
+});
+```
+
+### Type Checking as Testing
+
+<Info>
+  The frontend relies heavily on TypeScript's type system to catch errors at compile time.
+</Info>
+
+```bash
+# Run type checker
+bun run check
+
+# Watch mode for type checking
+bun run check:watch
+```
+
+This is often more valuable than unit tests for catching common errors:
+- Type mismatches
+- Missing properties
+- Invalid function arguments
+- Incorrect return types
+
+### Manual Testing Workflow
+
+For UI changes, manual testing is essential:
+
+<Steps>
+  <Step title="Start Dev Server">
+    ```bash
+    task debug
+    ```
+  </Step>
+  <Step title="Test User Flows">
+    - Install a mod
+    - Uninstall a mod
+    - Change settings
+    - Navigate between views
+    - Test edge cases
+  </Step>
+  <Step title="Check DevTools">
+    - Console for errors
+    - Network tab for IPC calls
+    - Performance for optimization
+  </Step>
+  <Step title="Test on Multiple Platforms">
+    If possible, test on Windows, macOS, and Linux.
+  </Step>
+</Steps>
+
+## Continuous Integration (CI)
+
+The project uses GitHub Actions for automated testing:
+
+### CI Workflow (`ci.yml`)
+
+Runs on every push and pull request:
+
+<Steps>
+  <Step title="Type Check">
+    Validates TypeScript types with `svelte-check`
+  </Step>
+  <Step title="Lint">
+    Runs `oxlint` on frontend and `cargo clippy` on backend
+  </Step>
+  <Step title="Format Check">
+    Ensures code is formatted with `cargo fmt --check`
+  </Step>
+  <Step title="Test">
+    Runs all Rust tests with `--test-threads=1`
+  </Step>
+  <Step title="Build">
+    Attempts to build for all platforms
+  </Step>
+</Steps>
+
+### Running CI Checks Locally
+
+Before pushing, run the same checks CI will run:
+
+```bash
+# All checks (same as CI)
+task check
+
+# Individual steps
+bun run check        # Type check
+bun run lint         # Frontend lint
+cargo clippy         # Rust lint
+cargo fmt --check    # Format check
+task test            # All tests
+```
+
+## Writing Good Tests
+
+### Test Structure (AAA Pattern)
+
+<Steps>
+  <Step title="Arrange">
+    Set up test data and preconditions
+    
+    ```rust
+    let mod_id = "test-mod";
+    let install_path = tempdir().unwrap();
+    ```
+  </Step>
+  <Step title="Act">
+    Execute the code being tested
+    
+    ```rust
+    let result = install_mod(mod_id, &install_path);
+    ```
+  </Step>
+  <Step title="Assert">
+    Verify the expected outcome
+    
+    ```rust
+    assert!(result.is_ok());
+    assert!(install_path.path().join(mod_id).exists());
+    ```
+  </Step>
+</Steps>
+
+### Test Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Do's" icon="check">
+    - Test one thing per test
+    - Use descriptive test names
+    - Clean up resources (temp files)
+    - Test error cases
+    - Use test fixtures
+    - Keep tests independent
+  </Card>
+  <Card title="Don'ts" icon="xmark">
+    - Don't test implementation details
+    - Avoid flaky tests
+    - Don't rely on test order
+    - Avoid shared mutable state
+    - Don't skip cleanup
+    - Avoid overly complex tests
+  </Card>
+</CardGroup>
+
+### Testing Error Cases
+
+Always test both success and failure paths:
+
+```rust
+#[test]
+fn test_install_mod_success() {
+    let result = install_mod("valid-mod");
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_install_mod_missing_file() {
+    let result = install_mod("nonexistent-mod");
+    assert!(result.is_err());
+    
+    match result {
+        Err(InstallError::FileNotFound(_)) => {},
+        _ => panic!("Expected FileNotFound error")
+    }
+}
+
+#[test]
+fn test_install_mod_invalid_permissions() {
+    // Test permission errors
+}
+```
+
+## Test Coverage
+
+### Generating Coverage Reports
+
+<CodeGroup>
+```bash Frontend Coverage
+bun run test:coverage
+
+# Output: coverage/index.html
+```
+
+```bash Rust Coverage (cargo-tarpaulin)
+# Install tarpaulin
+cargo install cargo-tarpaulin
+
+# Generate coverage
+cd src-tauri/bmm-lib
+cargo tarpaulin --out Html --test-threads=1
+
+# Output: tarpaulin-report.html
+```
+</CodeGroup>
+
+<Info>
+  While 100% coverage isn't the goal, aim for:
+  - Core business logic: 80%+
+  - Error handling: 70%+
+  - UI components: Type safety + manual testing
+</Info>
+
+## Debugging Tests
+
+### Rust Test Debugging
+
+<Steps>
+  <Step title="Print Debug Output">
+    ```rust
+    #[test]
+    fn test_something() {
+        let value = compute_value();
+        dbg!(&value);  // Print debug info
+        assert_eq!(value, 42);
+    }
+    ```
+    
+    Run with `--nocapture` to see output:
+    ```bash
+    cargo test -- --nocapture --test-threads=1
+    ```
+  </Step>
+  <Step title="Run Specific Test">
+    ```bash
+    cargo test test_install_mod -- --test-threads=1
+    ```
+  </Step>
+  <Step title="Use Rust Analyzer">
+    VS Code with rust-analyzer can run individual tests with "Run Test" code lens.
+  </Step>
+</Steps>
+
+### Frontend Test Debugging
+
+<Steps>
+  <Step title="Use console.log">
+    ```typescript
+    it('tests something', () => {
+      const result = computeValue();
+      console.log('Result:', result);
+      expect(result).toBe(42);
+    });
+    ```
+  </Step>
+  <Step title="Use Vitest UI">
+    ```bash
+    bun run test -- --ui
+    ```
+    
+    Opens interactive test UI in browser.
+  </Step>
+  <Step title="Debug in VS Code">
+    Add breakpoints and use Vitest's debugging support.
+  </Step>
+</Steps>
+
+## Common Testing Scenarios
+
+### Testing File Operations
+
+```rust
+use tempfile::tempdir;
+
+#[test]
+fn test_file_operations() {
+    // Create temporary directory
+    let dir = tempdir().unwrap();
+    let file_path = dir.path().join("test.txt");
+    
+    // Test file creation
+    std::fs::write(&file_path, "test content").unwrap();
+    
+    // Test file reading
+    let content = std::fs::read_to_string(&file_path).unwrap();
+    assert_eq!(content, "test content");
+    
+    // Cleanup happens automatically when `dir` is dropped
+}
+```
+
+### Testing Async Functions
+
+```rust
+#[tokio::test]
+async fn test_async_function() {
+    let result = async_operation().await;
+    assert!(result.is_ok());
+}
+```
+
+### Testing Tauri Commands
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_get_mod_details() {
+        let result = get_mod_details("test-mod".to_string()).await;
+        assert!(result.is_ok());
+        
+        let details = result.unwrap();
+        assert_eq!(details.id, "test-mod");
+    }
+}
+```
+
+## Troubleshooting Test Issues
+
+### Common Problems
+
+<Warning>
+  **Problem**: "database is locked" errors
+  
+  **Solution**: Always use `--test-threads=1` for tests that access the database.
+</Warning>
+
+<Warning>
+  **Problem**: Tests fail locally but pass in CI (or vice versa)
+  
+  **Solution**: 
+  - Check platform-specific code paths
+  - Verify environment variables
+  - Ensure dependencies are up to date
+  - Look for timing issues (race conditions)
+</Warning>
+
+<Warning>
+  **Problem**: Temporary files not cleaned up
+  
+  **Solution**: Use `tempfile::tempdir()` which automatically cleans up when dropped.
+</Warning>
+
+### Test Performance
+
+If tests are slow:
+
+<Steps>
+  <Step title="Profile Tests">
+    ```bash
+    cargo test -- --test-threads=1 --nocapture --show-output
+    ```
+  </Step>
+  <Step title="Parallelize Where Safe">
+    Only use `--test-threads=1` for database tests. Other tests can run in parallel.
+  </Step>
+  <Step title="Mock External Dependencies">
+    Mock network calls, file I/O, and other slow operations when appropriate.
+  </Step>
+</Steps>
+
+## Summary
+
+<Tip>
+  **Key takeaways**:
+  - Always run `task check` before committing
+  - Use `--test-threads=1` for database tests
+  - Focus on testing core logic and I/O boundaries
+  - Leverage TypeScript's type system for frontend safety
+  - Write descriptive test names
+  - Test both success and error paths
+</Tip>

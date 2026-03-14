@@ -1,0 +1,122 @@
+---
+title: Introduction
+description: Welcome to Balatro Mod Manager - the easiest way to install and manage mods for Balatro
+---
+
+# Welcome to Balatro Mod Manager
+
+Balatro Mod Manager is a standalone desktop application that makes finding, downloading, and installing mods for [Balatro](https://store.steampowered.com/app/2379780/Balatro/) easy. Built by the community for the community, it provides a seamless experience for managing your Balatro modding setup.
+
+<img className="block" src="/images/hero.png" alt="Balatro Mod Manager Interface" />
+
+## What is Balatro Mod Manager?
+
+Balatro Mod Manager (BMM) is a cross-platform tool designed to simplify the mod installation process for Balatro. Instead of manually downloading files, extracting archives, and placing them in the correct folders, BMM handles everything for you with just a few clicks.
+
+### Key Features
+
+<CardGroup cols={2}>
+  <Card title="One-Click Installation" icon="download">
+    Browse and install mods from a curated catalog with a single click. No manual file management required.
+  </Card>
+  <Card title="Automatic Updates" icon="refresh">
+    Keep your mods up-to-date with automatic update detection and installation.
+  </Card>
+  <Card title="Dependency Management" icon="puzzle-piece">
+    Automatically installs required dependencies like Steamodded and Lovely mod loader.
+  </Card>
+  <Card title="Cross-Platform" icon="desktop">
+    Works seamlessly on Windows, macOS, and Linux (including Steam Deck).
+  </Card>
+  <Card title="Mod Collections" icon="folder">
+    Install curated collections of mods that work well together.
+  </Card>
+  <Card title="Backup & Restore" icon="shield">
+    Create backups of your mod setup and restore them anytime.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+<Steps>
+  <Step title="Install the Manager">
+    Download and install Balatro Mod Manager for your operating system. The installer is standalone and doesn't require any external libraries.
+  </Step>
+  <Step title="Select Your Balatro Installation">
+    On first launch, BMM automatically detects your Balatro installation. If needed, you can manually select the game folder.
+  </Step>
+  <Step title="Install Lovely Mod Loader">
+    The mod loader (Lovely) is automatically installed when you install your first mod. This enables mod support in Balatro.
+  </Step>
+  <Step title="Browse and Install Mods">
+    Browse the mod catalog, read descriptions and reviews, then click "Install" to add mods to your game.
+  </Step>
+  <Step title="Launch and Play">
+    Launch Balatro directly from the mod manager with all your mods enabled.
+  </Step>
+</Steps>
+
+## Why Use a Mod Manager?
+
+While you can install Balatro mods manually, using a mod manager offers several advantages:
+
+- **Time Saving**: Install multiple mods in seconds instead of spending time on manual downloads and extraction
+- **Safety**: All mods in the catalog are from trusted sources and regularly updated
+- **Dependency Handling**: Automatically manages mod dependencies and compatibility requirements
+- **Easy Updates**: Update all your mods with a single click
+- **Clean Uninstallation**: Remove mods completely without leaving behind files
+- **Experimentation**: Try new mods risk-free with the backup and restore feature
+
+## Platform Support
+
+Balatro Mod Manager supports the following platforms:
+
+<Tabs>
+  <Tab title="Windows">
+    - Windows 10 and Windows 11
+    - Both 64-bit executables (.exe) and MSI installers available
+    - Automatic Steam detection
+    - Code-signed releases for security
+  </Tab>
+  <Tab title="macOS">
+    - macOS 11 (Big Sur) and later
+    - Universal binary supports both Intel and Apple Silicon
+    - DMG installer for easy installation
+    - Automatic Steam detection
+  </Tab>
+  <Tab title="Linux">
+    - Flatpak (recommended for Steam Deck)
+    - AppImage for universal compatibility
+    - AUR package for Arch Linux
+    - Debian/Ubuntu .deb packages
+    - Supports Steam version of Balatro
+  </Tab>
+</Tabs>
+
+<Warning>
+  **Xbox Game Pass Incompatibility**: Balatro Mod Manager is NOT compatible with the Xbox Game Pass version of Balatro. You must own the game on Steam or have a DRM-free version to use mods.
+</Warning>
+
+## Technology Stack
+
+Balatro Mod Manager is built with modern, performant technologies:
+
+- **Backend**: Rust with Tauri 2 framework for native performance and security
+- **Frontend**: SvelteKit for a responsive, fast user interface
+- **Database**: SQLite for local mod catalog and settings storage
+- **Cross-Platform**: Single codebase for Windows, macOS, and Linux
+
+## Open Source
+
+Balatro Mod Manager is open source software released under the GPL-3.0 license. You can:
+
+- View the source code on [GitHub](https://github.com/skyline69/balatro-mod-manager)
+- Report bugs and request features
+- Contribute to development
+- Build from source if desired
+
+## Getting Started
+
+Ready to start modding Balatro? Head over to the [Installation](/installation) guide to download and set up Balatro Mod Manager on your system.
+
+If you already have BMM installed, check out the [Quick Start](/quickstart) guide to get up and running, or learn how to [install your first mod](/first-mod).

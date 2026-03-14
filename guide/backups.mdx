@@ -1,0 +1,233 @@
+---
+title: Backups
+description: Creating, restoring, and managing mod backups
+---
+
+Balatro Mod Manager includes automatic and manual backup capabilities to protect your mod setup. Backups capture your entire Mods folder and database state, allowing you to restore to a previous configuration after updates, uninstalls, or other changes.
+
+## Backup Types
+
+BMM creates backups in several scenarios:
+
+<CardGroup cols={2}>
+  <Card title="Automatic Backups" icon="robot">
+    Created automatically before potentially destructive operations
+  </Card>
+  <Card title="Manual Backups" icon="hand">
+    Created on-demand by the user for safekeeping
+  </Card>
+</CardGroup>
+
+### Automatic Backup Triggers
+
+Automatic backups are created before:
+
+- **Updating a mod** - Before replacing an existing mod with a new version
+- **Uninstalling a mod** - Before removing a mod from your setup
+- **Bulk operations** - Before enabling/disabling multiple mods at once
+
+<Info>
+  **Debouncing**: Automatic backups use a 60-second debounce timer. If multiple operations occur within 60 seconds, they share the same backup to avoid clutter.
+</Info>
+
+## Backup Contents
+
+Each backup contains:
+
+1. **Compressed mod files** - A `.tar.gz` archive of your entire Mods folder (excluding Lovely-related files)
+2. **Database snapshot** - A JSON file containing:
+   - List of installed mods
+   - Mod dependencies
+   - Current versions
+   - Enabled/disabled states (`.lovelyignore` files)
+3. **Metadata** - Backup information including:
+   - Creation timestamp
+   - Trigger type (manual or automatic)
+   - User-provided name (for manual backups)
+   - Mod count
+   - Total size in bytes
+   - Lovely version at backup time
+
+## Creating Backups
+
+<Steps>
+  <Step title="Access the backups interface">
+    Navigate to the backups section in BMM
+  </Step>
+  
+  <Step title="Create a manual backup">
+    Click "Create Backup" and optionally provide a descriptive name
+  </Step>
+  
+  <Step title="Wait for completion">
+    The backup process compresses your mods folder, which may take a moment for large setups
+  </Step>
+</Steps>
+
+<Tip>
+  Manual backups are never automatically deleted. Create them before major changes to your mod setup.
+</Tip>
+
+## Restoring Backups
+
+Restoring a backup returns your mods folder and database to a previous state.
+
+<Warning>
+  **Restoration is destructive**: The current state will be replaced with the backup. Consider creating a manual backup before restoring.
+</Warning>
+
+<Steps>
+  <Step title="Select a backup">
+    Choose the backup you want to restore from the list
+  </Step>
+  
+  <Step title="Confirm restoration">
+    Review the backup details (date, mod count, size) and confirm
+  </Step>
+  
+  <Step title="Wait for extraction">
+    BMM will extract the backup archive and restore your mods
+  </Step>
+  
+  <Step title="Verify the result">
+    Check that your mods are restored correctly
+  </Step>
+</Steps>
+
+### What Gets Restored
+
+During restoration:
+
+- **Current mods are removed** - Existing mods (except Lovely files) are deleted
+- **Backup mods are extracted** - All mods from the backup are extracted to the Mods folder
+- **Database is restored** - Installed mod records are replaced with the backup snapshot
+- **Enabled states are restored** - `.lovelyignore` files are recreated as needed
+- **Lovely files are preserved** - The Lovely injector files are not affected
+
+<Info>
+  If restoration is interrupted (e.g., power loss), BMM will detect the incomplete restoration on next launch and allow you to retry or cancel.
+</Info>
+
+## Managing Backups
+
+### Viewing Backup Details
+
+Each backup displays:
+- **Name** - User-provided name or auto-generated description
+- **Creation date and time**
+- **Trigger type** - Manual, before update, before uninstall, or before bulk operation
+- **Mod count** - Number of mods in the snapshot
+- **Size** - Total backup size in MB/GB
+- **Lovely version** - Version of Lovely injector at backup time
+
+### Deleting Backups
+
+You can manually delete backups to free up disk space. Simply select a backup and click "Delete".
+
+<Note>
+  Deleted backups cannot be recovered. Make sure you no longer need a backup before deleting it.
+</Note>
+
+## Retention Policy
+
+To prevent excessive disk usage:
+
+- **Automatic backups**: Only the 5 most recent automatic backups are kept
+- **Manual backups**: Never automatically deleted; you must manually remove them
+
+Older automatic backups are automatically pruned when new automatic backups are created.
+
+## Backup Storage Location
+
+Backups are stored in:
+
+- **Windows**: `%APPDATA%\Balatro\backups\`
+- **macOS**: `~/Library/Application Support/Balatro/backups/`
+- **Linux**: `~/.config/Balatro/backups/`
+
+Each backup is stored in its own subdirectory named with a timestamp and trigger type:
+
+```
+backups/
+├── 20260314_143022_manual/
+│   ├── mods.tar.gz
+│   ├── database.json
+│   └── metadata.json
+├── 20260314_120501_auto_update/
+│   ├── mods.tar.gz
+│   ├── database.json
+│   └── metadata.json
+└── ...
+```
+
+## Performance Considerations
+
+<Accordion title="Backup compression">
+  Backups use fast compression (gzip level 1) to minimize the time required. This sacrifices some space efficiency for speed.
+</Accordion>
+
+<Accordion title="Large mod setups">
+  If you have many mods or large mod files:
+  - Backups may take 10-30 seconds to create
+  - Restoration may take 15-45 seconds
+  - Backup files may be several hundred MB
+</Accordion>
+
+<Accordion title="Skipped files">
+  The following are excluded from backups to reduce size:
+  - Lovely injector files (`.dll`, `.dylib`, `.so`)
+  - Hidden files and directories (starting with `.`)
+  - Known non-mod directories (`.git`, `node_modules`, `__MACOSX`)
+</Accordion>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Backup creation fails">
+    **Possible causes**:
+    - Insufficient disk space in the backup directory
+    - Mods folder is locked by another process
+    - Permissions issue accessing the Mods folder
+
+    **Solutions**:
+    - Free up disk space (at least 2x your Mods folder size)
+    - Close Balatro and any file explorers viewing the Mods folder
+    - Run BMM with appropriate permissions
+  </Accordion>
+
+  <Accordion title="Restore interrupted">
+    If a restoration is interrupted (power loss, crash), BMM creates a `.restore_in_progress` marker file.
+
+    **Recovery**:
+    - Restart BMM - it will detect the interrupted restore
+    - Choose to retry the restoration or cancel
+    - If you cancel, your mods may be in a partial state; restore from a different backup or reinstall mods
+  </Accordion>
+
+  <Accordion title="Backup size concerns">
+    If backups are consuming too much disk space:
+    - Delete old manual backups you no longer need
+    - The automatic retention policy keeps only 5 auto-backups
+    - Consider archiving backups externally before deleting
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Before major updates" icon="arrow-up">
+    Create a manual backup before updating multiple mods or Steamodded
+  </Card>
+  
+  <Card title="Stable configurations" icon="bookmark">
+    Create a named backup when you have a working mod setup you want to keep
+  </Card>
+  
+  <Card title="Experimentation" icon="flask">
+    Create a backup before testing new mods or experimental configurations
+  </Card>
+  
+  <Card title="Regular cleanup" icon="broom">
+    Periodically review and delete old manual backups you no longer need
+  </Card>
+</CardGroup>

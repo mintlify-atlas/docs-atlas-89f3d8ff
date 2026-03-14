@@ -1,0 +1,517 @@
+---
+title: Path Commands
+description: Tauri commands for path detection and management in Balatro Mod Manager
+---
+
+## Overview
+
+Path commands handle Balatro installation detection, path validation, and directory operations across all supported platforms.
+
+---
+
+## get_balatro_path
+
+Retrieves the currently configured Balatro installation path.
+
+### Rust Signature
+
+```rust
+pub async fn get_balatro_path(
+    state: tauri::State<'_, AppState>
+) -> Result<Option<String>, String>
+```
+
+<ParamField path="state" type="tauri::State<'_, AppState>" required>
+  Application state containing database
+</ParamField>
+
+### Returns
+
+<ResponseField name="path" type="Option<String>">
+  The configured installation path, or `null` if not set
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Basic Usage
+import { invoke } from '@tauri-apps/api/core';
+
+const getInstallPath = async () => {
+  const path = await invoke<string | null>('get_balatro_path');
+  
+  if (path) {
+    console.log(`Balatro installed at: ${path}`);
+  } else {
+    console.log('No installation path configured');
+  }
+  
+  return path;
+};
+```
+
+```typescript With Validation
+const getValidPath = async () => {
+  const path = await invoke<string | null>('get_balatro_path');
+  
+  if (!path) {
+    throw new Error('Installation path not configured');
+  }
+  
+  // Verify path still exists
+  const exists = await invoke<boolean>('path_exists', { path });
+  
+  if (!exists) {
+    console.warn('Configured path no longer exists');
+    return null;
+  }
+  
+  return path;
+};
+```
+</CodeGroup>
+
+---
+
+## set_balatro_path
+
+Sets the Balatro installation path.
+
+### Rust Signature
+
+```rust
+pub async fn set_balatro_path(
+    state: tauri::State<'_, AppState>,
+    path: String,
+) -> Result<(), String>
+```
+
+<ParamField path="path" type="String" required>
+  Filesystem path to the Balatro installation directory
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Set Path
+import { invoke } from '@tauri-apps/api/core';
+
+const setInstallPath = async (path: string) => {
+  try {
+    await invoke('set_balatro_path', { path });
+    console.log('Installation path updated');
+  } catch (error) {
+    console.error('Failed to set path:', error);
+    throw error;
+  }
+};
+```
+
+```typescript With Dialog
+import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
+
+const selectInstallPath = async () => {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: 'Select Balatro Installation'
+  });
+  
+  if (selected && typeof selected === 'string') {
+    await invoke('set_balatro_path', { path: selected });
+    return selected;
+  }
+  
+  return null;
+};
+```
+</CodeGroup>
+
+<Warning>
+  **Linux-specific:** On Linux, this command validates that the path is a Steam installation. Custom/GOG paths are not supported due to Proton requirements.
+</Warning>
+
+<Note>
+  This command automatically invalidates the internal Balatro path cache when successful.
+</Note>
+
+---
+
+## find_steam_balatro
+
+Automatically detects Balatro installations and prioritizes Steam installs.
+
+### Rust Signature
+
+```rust
+pub async fn find_steam_balatro(
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<String>, String>
+```
+
+### Returns
+
+<ResponseField name="paths" type="Vec<String>">
+  List of detected Balatro installation paths, with Steam install first if found
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Auto-detect
+import { invoke } from '@tauri-apps/api/core';
+
+const autoDetect = async () => {
+  const paths = await invoke<string[]>('find_steam_balatro');
+  
+  if (paths.length === 0) {
+    console.log('No Balatro installations found');
+    return null;
+  }
+  
+  console.log(`Found ${paths.length} installation(s)`);
+  console.log('Primary path:', paths[0]);
+  
+  return paths;
+};
+```
+
+```typescript With User Selection
+const detectAndSelect = async () => {
+  const paths = await invoke<string[]>('find_steam_balatro');
+  
+  if (paths.length === 0) {
+    alert('No Balatro installations found. Please select manually.');
+    return null;
+  }
+  
+  if (paths.length === 1) {
+    // Auto-select single installation
+    return paths[0];
+  }
+  
+  // Let user choose from multiple installations
+  return await showPathSelector(paths);
+};
+```
+</CodeGroup>
+
+<Note>
+  This command automatically sets the detected path in the database. If a Steam installation is found, it's automatically selected and returned first in the array.
+</Note>
+
+---
+
+## check_custom_balatro
+
+Validates a custom path as a valid Balatro installation.
+
+### Rust Signature
+
+```rust
+pub async fn check_custom_balatro(
+    state: tauri::State<'_, AppState>,
+    path: String,
+) -> Result<bool, String>
+```
+
+<ParamField path="path" type="String" required>
+  Path to validate (can be file or directory)
+</ParamField>
+
+### Returns
+
+<ResponseField name="valid" type="bool">
+  `true` if the path is a valid Balatro installation, `false` otherwise
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Validate Path
+import { invoke } from '@tauri-apps/api/core';
+
+const validatePath = async (path: string) => {
+  const isValid = await invoke<boolean>('check_custom_balatro', { path });
+  
+  if (isValid) {
+    console.log('Valid Balatro installation');
+  } else {
+    console.log('Not a valid Balatro installation');
+  }
+  
+  return isValid;
+};
+```
+
+```typescript File Dialog Integration
+import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
+
+const selectAndValidate = async () => {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: 'Select Balatro Installation'
+  });
+  
+  if (!selected || typeof selected !== 'string') {
+    return false;
+  }
+  
+  const isValid = await invoke<boolean>('check_custom_balatro', { path: selected });
+  
+  if (!isValid) {
+    alert('The selected folder is not a valid Balatro installation.');
+  }
+  
+  return isValid;
+};
+```
+</CodeGroup>
+
+<Note>
+  If the path is valid, this command automatically saves it to the database and invalidates the path cache.
+</Note>
+
+---
+
+## check_existing_installation
+
+Checks if the stored installation path is still valid.
+
+### Rust Signature
+
+```rust
+pub async fn check_existing_installation(
+    state: tauri::State<'_, AppState>,
+) -> Result<Option<String>, String>
+```
+
+### Returns
+
+<ResponseField name="path" type="Option<String>">
+  The installation path if valid, `null` if invalid or not set
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const verifyExistingPath = async () => {
+  const path = await invoke<string | null>('check_existing_installation');
+  
+  if (path) {
+    console.log('Installation is valid:', path);
+    return path;
+  } else {
+    console.log('No valid installation found');
+    // Trigger setup wizard or path selection
+    return null;
+  }
+};
+```
+
+<Note>
+  This command automatically removes invalid paths from the database.
+</Note>
+
+---
+
+## get_mods_folder
+
+Retrieves the path to the Balatro mods directory.
+
+### Rust Signature
+
+```rust
+pub async fn get_mods_folder() -> Result<String, String>
+```
+
+### Returns
+
+<ResponseField name="path" type="String">
+  Path to the mods directory
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Get Mods Path
+import { invoke } from '@tauri-apps/api/core';
+
+const getModsPath = async () => {
+  const path = await invoke<string>('get_mods_folder');
+  console.log('Mods folder:', path);
+  return path;
+};
+```
+
+```typescript Open Mods Folder
+import { invoke } from '@tauri-apps/api/core';
+
+const openModsFolder = async () => {
+  const path = await invoke<string>('get_mods_folder');
+  await invoke('open_directory', { path });
+};
+```
+</CodeGroup>
+
+<Note>
+  **Platform-specific paths:**
+  - **Windows**: `%APPDATA%/Balatro/Mods`
+  - **macOS**: `~/Library/Application Support/Balatro/Mods`
+  - **Linux**: `~/.local/share/Balatro/Mods` (Lovely 0.9.0+) or `~/.config/Balatro/Mods` (older)
+  - **Linux Flatpak**: Host path at `~/.local/share/Balatro/Mods` for file manager access
+</Note>
+
+---
+
+## open_directory
+
+Opens a directory in the system file manager.
+
+### Rust Signature
+
+```rust
+pub async fn open_directory(
+    app: tauri::AppHandle,
+    path: String
+) -> Result<(), String>
+```
+
+<ParamField path="app" type="tauri::AppHandle" required>
+  Tauri application handle
+</ParamField>
+
+<ParamField path="path" type="String" required>
+  Directory path to open
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Open Directory
+import { invoke } from '@tauri-apps/api/core';
+
+const openDir = async (path: string) => {
+  try {
+    await invoke('open_directory', { path });
+  } catch (error) {
+    console.error('Failed to open directory:', error);
+    alert(`Could not open folder: ${error}`);
+  }
+};
+```
+
+```typescript Open Mod Folder
+const openModFolder = async (modPath: string) => {
+  const exists = await invoke<boolean>('path_exists', { path: modPath });
+  
+  if (!exists) {
+    alert('Mod folder does not exist');
+    return;
+  }
+  
+  await invoke('open_directory', { path: modPath });
+};
+```
+</CodeGroup>
+
+<Note>
+  **Platform-specific behavior:**
+  - **Windows**: Opens in Explorer
+  - **macOS**: Opens in Finder
+  - **Linux**: Uses `xdg-open`, with special handling for Flatpak and WSL environments
+</Note>
+
+<Warning>
+  The path must exist and be a directory, or the command will fail with an error.
+</Warning>
+
+---
+
+## path_exists
+
+Checks if a path exists on the filesystem.
+
+### Rust Signature
+
+```rust
+pub async fn path_exists(path: String) -> Result<bool, String>
+```
+
+<ParamField path="path" type="String" required>
+  Path to check
+</ParamField>
+
+### Returns
+
+<ResponseField name="exists" type="bool">
+  `true` if the path exists, `false` otherwise
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Check Path
+import { invoke } from '@tauri-apps/api/core';
+
+const checkPath = async (path: string) => {
+  const exists = await invoke<boolean>('path_exists', { path });
+  return exists;
+};
+```
+
+```typescript Validate Before Action
+const safeDelete = async (path: string) => {
+  const exists = await invoke<boolean>('path_exists', { path });
+  
+  if (!exists) {
+    console.log('Path does not exist, skipping deletion');
+    return;
+  }
+  
+  // Proceed with deletion
+  await deletePath(path);
+};
+```
+</CodeGroup>
+
+---
+
+## verify_path_exists
+
+Legacy path existence check (returns boolean directly, no error).
+
+### Rust Signature
+
+```rust
+pub async fn verify_path_exists(path: String) -> bool
+```
+
+<ParamField path="path" type="String" required>
+  Path to verify
+</ParamField>
+
+### Returns
+
+<ResponseField name="exists" type="bool">
+  `true` if path exists, `false` if not or on error
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const verifyPath = async (path: string) => {
+  return await invoke<boolean>('verify_path_exists', { path });
+};
+```
+
+<Note>
+  This command never throws errors - it returns `false` for both non-existent paths and filesystem errors. Use `path_exists` for error handling.
+</Note>

@@ -1,80 +1,395 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start Guide
+description: Get up and running with Balatro Mod Manager in minutes
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through your first time using Balatro Mod Manager, from launch to installing the Lovely mod loader.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Before starting, make sure you have [installed Balatro Mod Manager](/installation) and have Balatro installed on your system.
 </Note>
+
+## First Launch
+
+When you first launch Balatro Mod Manager, you'll need to configure it to work with your Balatro installation.
+
+### Setting Up Your Balatro Installation Path
+
+<Steps>
+  <Step title="Launch Balatro Mod Manager">
+    Open BMM from your Start Menu (Windows), Applications folder (macOS), or application launcher (Linux).
+    
+    <img className="block" src="/images/first-launch.png" alt="First launch screen" />
+  </Step>
+  
+  <Step title="Automatic Path Detection">
+    BMM will automatically attempt to detect your Balatro installation. In most cases, especially for Steam users, it will find it automatically.
+    
+    If your installation is detected, you'll see:
+    - The path to your Balatro installation
+    - A green checkmark indicating a valid installation
+    - An option to proceed to the main interface
+    
+    Click **Continue** to proceed.
+  </Step>
+  
+  <Step title="Manual Path Selection (if needed)">
+    If BMM cannot automatically detect your Balatro installation:
+    
+    1. Click **Browse** to open a file picker
+    2. Navigate to your Balatro installation folder:
+       - **Windows (Steam)**: `C:\Program Files (x86)\Steam\steamapps\common\Balatro`
+       - **macOS (Steam)**: `~/Library/Application Support/Steam/steamapps/common/Balatro`
+       - **Linux (Steam)**: `~/.steam/steam/steamapps/common/Balatro`
+    3. Select the folder and click **Choose** or **Open**
+    4. Click **Continue** once the path is validated
+  </Step>
+</Steps>
+
+<Info>
+  BMM validates your Balatro installation by checking for the game executable and required folder structure. If validation fails, double-check that you've selected the correct folder.
+</Info>
+
+### Understanding the Main Interface
+
+Once you've set up your installation path, you'll see the main Balatro Mod Manager interface.
+
+<img className="block" src="/images/main-interface.png" alt="Main interface overview" />
+
+The interface consists of several key areas:
+
+<CardGroup cols={2}>
+  <Card title="Sidebar Navigation" icon="bars">
+    Switch between Mods, Settings, Backups, and About sections.
+  </Card>
+  <Card title="Mod Catalog" icon="grid">
+    Browse available mods with thumbnails, descriptions, and ratings.
+  </Card>
+  <Card title="Search and Filter" icon="search">
+    Find specific mods by name or filter by category.
+  </Card>
+  <Card title="Launch Button" icon="rocket">
+    Launch Balatro directly from BMM with your mods enabled.
+  </Card>
+</CardGroup>
+
+---
+
+## Installing the Lovely Mod Loader
+
+Before you can use any mods, you need to install **Lovely**, the mod loader that enables modding support in Balatro.
+
+<Note>
+  Lovely is a mod loader that patches Balatro to support loading custom Lua code. It's required for almost all Balatro mods to function.
+</Note>
+
+### Automatic Installation
+
+The first time you try to install a mod, BMM will automatically prompt you to install Lovely.
+
+<Steps>
+  <Step title="Browse for a Mod">
+    In the main interface, browse the mod catalog or search for a specific mod you'd like to install.
+    
+    For this example, let's find a popular mod like "Steamodded" (the mod framework many mods depend on).
+  </Step>
+  
+  <Step title="Click Install">
+    Click the **Install** button on any mod card.
+    
+    <img className="block" src="/images/lovely-prompt.png" alt="Lovely installation prompt" />
+  </Step>
+  
+  <Step title="Lovely Installation Prompt">
+    You'll see a popup informing you that Lovely needs to be installed:
+    
+    > "To use mods in Balatro, you need to install the Lovely mod loader. Would you like to install it now?"
+    
+    Click **Install Lovely** to proceed.
+  </Step>
+  
+  <Step title="Wait for Installation">
+    BMM will:
+    - Download the latest version of Lovely
+    - Install it to your Balatro directory
+    - Configure it to work with your game
+    
+    This usually takes just a few seconds.
+  </Step>
+  
+  <Step title="Installation Complete">
+    Once Lovely is installed, you'll see a success message. BMM will then proceed to install the mod you originally selected.
+  </Step>
+</Steps>
+
+### Manual Lovely Installation
+
+You can also install Lovely manually from the Settings section:
+
+<Steps>
+  <Step title="Open Settings">
+    Click the **Settings** icon in the sidebar navigation.
+  </Step>
+  
+  <Step title="Find Mod Loader Section">
+    Scroll down to the "Mod Loader" section.
+  </Step>
+  
+  <Step title="Install or Update Lovely">
+    - If Lovely is not installed, click **Install Lovely**
+    - If Lovely is installed but outdated, click **Update Lovely**
+    - Current version information is displayed
+  </Step>
+</Steps>
+
+<Tip>
+  BMM will automatically notify you when a new version of Lovely is available. Keeping Lovely updated ensures compatibility with the latest mods.
+</Tip>
+
+---
+
+## Exploring the Interface
+
+Now that Lovely is installed, let's explore the main features of Balatro Mod Manager.
+
+### The Mods Section
+
+The Mods section is where you'll spend most of your time. Here you can:
+
+#### Browse Mods
+
+Mods are displayed as cards with:
+- **Thumbnail**: Visual preview of the mod
+- **Title**: Mod name
+- **Author**: Creator of the mod
+- **Description**: Brief overview of what the mod does
+- **Install Status**: Whether the mod is installed, has updates, etc.
+- **Dependencies**: Required mods or frameworks
+
+#### Filter and Search
+
+<Tabs>
+  <Tab title="Search">
+    Use the search bar at the top to find mods by name:
+    - Type any part of a mod name
+    - Results update in real-time as you type
+    - Clear the search to see all mods again
+  </Tab>
+  
+  <Tab title="Categories">
+    Filter mods by category:
+    - **All**: Show all available mods
+    - **Installed**: Only show mods you have installed
+    - **Updates**: Mods with available updates
+    - **Gameplay**: Mods that change game mechanics
+    - **Cosmetic**: Visual and audio mods
+    - **Collections**: Curated sets of mods
+  </Tab>
+</Tabs>
+
+#### View Modes
+
+Switch between different view modes:
+- **Grid View**: Card-based layout with thumbnails (default)
+- **List View**: Compact list with more information visible at once
+- **Compact View**: Minimal layout for browsing many mods quickly
+
+Adjust the card size using the slider in the top-right corner.
+
+### The Settings Section
+
+<Steps>
+  <Step title="Access Settings">
+    Click the **Settings** (gear) icon in the sidebar.
+  </Step>
+  
+  <Step title="Configure Preferences">
+    Available settings include:
+    
+    **General**
+    - **Theme**: Switch between Light and Dark mode
+    - **Launch Options**: Configure how Balatro launches
+    - **Auto-update Check**: Enable/disable checking for BMM updates
+    
+    **Paths**
+    - **Balatro Installation**: Change your Balatro installation path
+    - **Mods Folder**: View where mods are installed
+    
+    **Mod Loader**
+    - **Lovely Version**: Current version and update options
+    - **Balamod Support**: Alternative mod loader (if installed)
+    
+    **Advanced**
+    - **Discord Rich Presence**: Show what you're playing on Discord
+    - **Background Effects**: Enable/disable animated backgrounds
+    - **Cache Management**: Clear thumbnail and description caches
+  </Step>
+</Steps>
+
+### The Backups Section
+
+Protect your mod setup with backups:
+
+<Steps>
+  <Step title="Create a Backup">
+    1. Click **Backups** in the sidebar
+    2. Click **Create Backup**
+    3. Enter a name for your backup (e.g., "Before major update")
+    4. Click **Save**
+  </Step>
+  
+  <Step title="Manage Backups">
+    Your backups are listed with:
+    - Backup name
+    - Date created
+    - Number of mods included
+    - Actions: Restore or Delete
+  </Step>
+</Steps>
+
+<Warning>
+  Restoring a backup will replace your current mod configuration. Make sure to create a backup of your current setup before restoring an old one.
+</Warning>
+
+---
+
+## Launching Balatro
+
+Once you have Lovely installed (and optionally some mods), you're ready to launch Balatro with mod support.
+
+<Steps>
+  <Step title="Click the Launch Button">
+    The **Launch Balatro** button is prominently displayed at the top of the interface.
+    
+    <img className="block" src="/images/launch-button.png" alt="Launch Balatro button" />
+  </Step>
+  
+  <Step title="Launch Modes">
+    You can launch Balatro in different ways:
+    - **Default**: Launch normally with all installed mods
+    - **Through Steam**: Launch via Steam (maintains playtime tracking)
+    - **Safe Mode**: Launch without mods (for troubleshooting)
+  </Step>
+  
+  <Step title="Verify Mods Are Loaded">
+    When Balatro launches:
+    1. You should see a Lovely logo or message on the title screen
+    2. Mods will load in the background
+    3. Check the mod menu in-game (if your mod framework provides one) to verify mods are active
+  </Step>
+</Steps>
+
+<Tip>
+  **First Launch Tip**: If this is your first time running Balatro with mods, it may take a few extra seconds to start as Lovely initializes. This is normal.
+</Tip>
+
+---
+
+## Security Acknowledgment
+
+The first time you install a mod, you'll see a security warning:
+
+<img className="block" src="/images/security-popup.png" alt="Security acknowledgment popup" />
+
+This warning explains:
+- Mods are third-party code that modify your game
+- Only install mods from sources you trust
+- BMM curates mods from trusted community sources
+- You should understand the risks before proceeding
+
+**Click "I Understand" to acknowledge and proceed with mod installation.** You'll only see this warning once.
+
+---
+
+## Understanding Dependencies
+
+Many mods require other mods to function. BMM handles this automatically:
+
+### Automatic Dependency Installation
+
+When you install a mod with dependencies:
+
+<Steps>
+  <Step title="Dependency Detection">
+    BMM analyzes the mod and identifies required dependencies (e.g., Steamodded, Talisman).
+  </Step>
+  
+  <Step title="Dependency Prompt">
+    You'll see a popup listing all required dependencies:
+    
+    > "This mod requires the following to function:
+    > - Steamodded (mod framework)
+    > - Talisman (deck injection API)
+    >
+    > Would you like to install these dependencies?"
+  </Step>
+  
+  <Step title="Automatic Installation">
+    Click **Install All** and BMM will:
+    - Download all dependencies
+    - Install them in the correct order
+    - Install your selected mod
+    - Verify everything is configured correctly
+  </Step>
+</Steps>
+
+<Info>
+  Common dependencies you'll encounter:
+  - **Steamodded**: The most popular mod framework for Balatro
+  - **Talisman**: API for adding custom decks and content
+  - **Lovely**: The core mod loader (always required)
+</Info>
+
+---
+
+## Tips for New Users
+
+<CardGroup cols={2}>
+  <Card title="Start Small" icon="seedling">
+    Install just a few mods at first to understand how they work before adding many at once.
+  </Card>
+  <Card title="Read Descriptions" icon="book">
+    Mod descriptions often contain important compatibility notes and configuration instructions.
+  </Card>
+  <Card title="Create Backups" icon="shield">
+    Create a backup before making major changes to your mod setup.
+  </Card>
+  <Card title="Check for Updates" icon="refresh">
+    Regularly update your mods to get bug fixes and new features.
+  </Card>
+  <Card title="Join the Community" icon="users">
+    Join Balatro modding communities to discover new mods and get help.
+  </Card>
+  <Card title="Report Issues" icon="bug">
+    If you encounter problems, use the Report Issue button in BMM to get help.
+  </Card>
+</CardGroup>
+
+---
+
+## Next Steps
+
+Now that you're familiar with the basics:
+
+<Card title="Install Your First Mod" icon="puzzle-piece" href="/first-mod">
+  Follow our detailed guide to installing and managing your first mod
+</Card>
+
+Or explore specific topics:
+
+<CardGroup cols={2}>
+  <Card title="Managing Mods" href="/guide/managing-mods">
+    Learn how to update, disable, and uninstall mods
+  </Card>
+  <Card title="Mod Collections" href="/guide/mod-collections">
+    Install curated collections of compatible mods
+  </Card>
+  <Card title="Troubleshooting" href="/troubleshooting/common-issues">
+    Solutions for common issues
+  </Card>
+  <Card title="Advanced Features" href="/guide/backups">
+    Explore power user features and customization
+  </Card>
+</CardGroup>

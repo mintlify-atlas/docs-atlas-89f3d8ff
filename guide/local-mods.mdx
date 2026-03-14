@@ -1,0 +1,343 @@
+---
+title: Local Mods
+description: Importing and detecting manually installed mods
+---
+
+BMM can detect and import mods that you've installed manually (outside of BMM). This is useful if you've downloaded mods from GitHub, Discord, or other sources.
+
+## How Local Mod Detection Works
+
+BMM scans your Mods folder to find mods that aren't tracked in its database:
+
+<Steps>
+  <Step title="Filesystem scan">
+    BMM recursively scans your Mods directory for mod folders
+  </Step>
+  
+  <Step title="Metadata extraction">
+    Reads `lovely.toml`, JSON manifests, or Thunderstore metadata files
+  </Step>
+  
+  <Step title="Catalog matching">
+    Attempts to match detected mods against the BMM catalog using fuzzy matching
+  </Step>
+  
+  <Step title="Display results">
+    Shows detected mods with import/manage options
+  </Step>
+</Steps>
+
+<Info>
+  Detection is cached to avoid repeated filesystem scans. The cache is invalidated when mods are added, removed, or when the Mods folder changes.
+</Info>
+
+## Detection Methods
+
+BMM uses multiple techniques to identify mods:
+
+### 1. Lovely Configuration Files
+
+Mods with a `lovely.toml` file are detected first:
+
+```toml
+[manifest]
+name = "My Awesome Mod"
+author = "ModAuthor"
+version = "1.0.0"
+description = "Description of the mod"
+```
+
+### 2. Thunderstore Manifests
+
+Mods with a `manifest.json` (Thunderstore format) are detected:
+
+```json
+{
+  "name": "MyMod",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/author/mymod",
+  "description": "A cool mod",
+  "dependencies": ["Steamodded-1.0.0"]
+}
+```
+
+### 3. JSON Metadata Files
+
+Generic JSON files with mod information:
+- `mod.json`
+- `main.json`  
+- `info.json`
+- `config.json`
+
+BMM looks for name, author, version, and description fields.
+
+### 4. Directory Name Heuristics
+
+If no metadata files are found, BMM uses the directory name:
+- Matches against catalog mod names
+- Uses fuzzy matching for similarity
+- Considers special cases (Steamodded, Talisman)
+
+## Catalog Matching
+
+BMM attempts to match local mods to the official catalog:
+
+<Accordion title="Exact matching">
+  - Mod ID or name matches exactly (case-insensitive)
+  - Directory name matches catalog title
+  - Compacted names match (alphanumeric only)
+</Accordion>
+
+<Accordion title="Fuzzy matching">
+  If exact matching fails:
+  - Calculates edit distance (Levenshtein distance)
+  - Requires 85% similarity
+  - Maximum edit distance of 2 characters
+  - Minimum length of 6 characters
+  - Length difference ≤ 2 characters
+</Accordion>
+
+<Accordion title="Special cases">
+  **Steamodded**:
+  - Matches "Steamodded", "SMODS", "smods-*" directories
+  - Detects from Thunderstore manifest
+  
+  **Talisman**:
+  - Detected at Balatro root (outside Mods folder)
+  - Matches "Talisman" in name or directory
+</Accordion>
+
+<Info>
+  When a local mod matches a catalog entry, BMM displays the catalog information and allows you to switch to the catalog-managed version.
+</Info>
+
+## Viewing Detected Mods
+
+<Steps>
+  <Step title="Open local mods view">
+    Navigate to the "Local Mods" or "Import Mods" section in BMM
+  </Step>
+  
+  <Step title="Review detected mods">
+    BMM shows:
+    - Mod name and version
+    - Installation path
+    - Catalog match (if found)
+    - Dependencies
+    - Duplicate status
+  </Step>
+  
+  <Step title="Import or manage">
+    Choose actions for each mod:
+    - Import to BMM tracking
+    - Switch to catalog version
+    - Remove duplicate
+    - Keep as manual install
+  </Step>
+</Steps>
+
+## Duplicate Detection
+
+BMM identifies duplicates to prevent conflicts:
+
+<Warning>
+  **Duplicates marked**: If a detected mod has the same name as a BMM-managed mod, it's flagged as "(Manual)" to distinguish it.
+</Warning>
+
+### Why Duplicates Occur
+
+- You installed a mod manually, then later installed it through BMM
+- A mod was restored from a backup while already installed
+- Bundled dependencies were extracted separately
+
+### Resolving Duplicates
+
+<Steps>
+  <Step title="Identify the duplicate">
+    BMM marks duplicates with "(Manual)" suffix
+  </Step>
+  
+  <Step title="Choose which to keep">
+    - Keep BMM-managed version for automatic updates
+    - Keep manual version if it's a custom/modified fork
+  </Step>
+  
+  <Step title="Remove the other">
+    Delete the duplicate from the Mods folder or uninstall via BMM
+  </Step>
+</Steps>
+
+## Bundled Dependencies
+
+Some mod packages include dependencies in a nested `Mods/` subdirectory:
+
+```
+MyModPackage/
+├── Mods/
+│   ├── Steamodded/
+│   └── OtherDependency/
+├── main.lua
+└── lovely.toml
+```
+
+BMM automatically:
+- **Detects bundled deps** by scanning for nested `Mods/` folders
+- **Excludes them from top-level listing** to avoid showing duplicates
+- **Tracks them separately** from standalone installs
+
+<Info>
+  Bundled dependencies are not shown in the local mods list to reduce clutter. They're managed as part of their parent mod package.
+</Info>
+
+## Platform-Specific Detection
+
+### Linux Proton/Wine Symlinks
+
+On Linux with Proton:
+- BMM creates symlinks from `~/.local/share/Balatro/Mods` to Proton's compat data directory
+- Detection works across both locations
+- Symlinked mods are detected and deduplicated
+
+### Flatpak Isolation
+
+If using the Flatpak version of BMM:
+- Mods are accessed via the sandbox
+- BMM uses `flatpak-spawn` for host filesystem operations
+- Detection still works but may be slightly slower
+
+### Legacy Migration (Linux)
+
+Lovely 0.9.0+ changed the Mods location from `~/.config/Balatro/Mods` to `~/.local/share/Balatro/Mods`.
+
+BMM automatically:
+1. Detects mods in the legacy location
+2. Offers to migrate them to the new location
+3. Creates a backwards-compatibility symlink
+
+<Tip>
+  If you upgraded from Lovely < 0.9.0 on Linux, BMM will migrate your mods automatically on first run.
+</Tip>
+
+## Import Options
+
+When you import a detected mod, you can:
+
+<CardGroup cols={2}>
+  <Card title="Track as-is" icon="check">
+    Add the mod to BMM's database without moving files
+  </Card>
+  
+  <Card title="Switch to catalog" icon="cloud-arrow-down">
+    Replace with the catalog version for automatic updates
+  </Card>
+  
+  <Card title="Remove duplicate" icon="trash">
+    Delete if it's a duplicate of an existing mod
+  </Card>
+  
+  <Card title="Ignore" icon="eye-slash">
+    Keep installed but don't track in BMM
+  </Card>
+</CardGroup>
+
+## Performance Considerations
+
+<Accordion title="Detection caching">
+  BMM caches detection results using a fingerprint of the Mods folder:
+  - Fingerprint includes directory names and modification times
+  - Cache is invalidated when top-level directories change
+  - Avoids rescanning on every BMM launch
+</Accordion>
+
+<Accordion title="Catalog indexing">
+  Catalog matching uses pre-built hash maps for O(1) lookups:
+  - Index by lowercase title
+  - Index by compacted ID
+  - Index by alphanumeric-only name
+  - Fuzzy matching only for non-matches (rare)
+</Accordion>
+
+<Accordion title="Scan depth limits">
+  To avoid excessive recursion:
+  - Maximum depth: 2 levels from Mods root
+  - Special handling for nested `Mods/` folders (bundled deps)
+  - Skips hidden directories (`.git`, `.`, `node_modules`)
+</Accordion>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Mod not detected">
+    **Possible causes**:
+    - Mod lacks recognized metadata files
+    - Directory is nested too deep (> 2 levels)
+    - Directory name doesn't match catalog
+
+    **Solutions**:
+    1. Add a `lovely.toml` or `manifest.json` file
+    2. Move the mod to a top-level directory in Mods/
+    3. Manually add the mod to BMM's database
+    4. Check that the directory is not hidden (no `.` prefix)
+  </Accordion>
+
+  <Accordion title="Wrong catalog match">
+    If BMM matches a mod to the wrong catalog entry:
+    - The fuzzy matching may have been too lenient
+    - Ignore the catalog match and import as-is
+    - Or switch to the correct catalog entry manually
+
+    **Prevention**: Use more descriptive directory names that match catalog titles
+  </Accordion>
+
+  <Accordion title="Duplicate mods shown">
+    If you see multiple entries for the same mod:
+    - Check if one is BMM-managed and one is manual
+    - Look for bundled vs. standalone installs
+    - Remove the one you don't want to keep
+
+    **To check**: BMM-managed mods are marked in the installed mods list
+  </Accordion>
+
+  <Accordion title="Cache not updating">
+    If recent changes to the Mods folder aren't reflected:
+    - Clear the detection cache by restarting BMM
+    - Or manually trigger a rescan
+    - Cache invalidation depends on directory mtimes
+
+    **Force rescan**: Install/uninstall any mod to clear the cache
+  </Accordion>
+
+  <Accordion title="Talisman not detected">
+    Talisman is installed at the Balatro root (not in Mods/):
+    - BMM scans `Balatro/Talisman/` separately
+    - Ensure it's in the correct location
+    - Must be a directory, not a single file
+
+    **Expected location**: `<Balatro Install>/Talisman/`
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use catalog when possible" icon="cloud">
+    Switch to catalog versions for automatic updates and dependency management
+  </Card>
+  
+  <Card title="Organize your mods" icon="folder">
+    Keep mods in top-level directories under Mods/ for easier detection
+  </Card>
+  
+  <Card title="Add metadata" icon="file-lines">
+    Include `lovely.toml` or `manifest.json` in custom mods for accurate detection
+  </Card>
+  
+  <Card title="Resolve duplicates" icon="clone">
+    Remove duplicate entries to avoid conflicts and confusion
+  </Card>
+</CardGroup>
+
+## Related Topics
+
+- [Installing Mods](/guide/installing-mods) - How to install mods through BMM
+- [Managing Mods](/guide/managing-mods) - Managing mod dependencies and updates

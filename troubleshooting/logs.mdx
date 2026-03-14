@@ -1,0 +1,405 @@
+---
+title: 'Logs & Debugging'
+description: 'How to find and read Balatro Mod Manager logs for troubleshooting'
+icon: 'file-lines'
+---
+
+## Log File Locations
+
+The mod manager uses a dual-output logging system that writes to both the console (stdout) and rotating log files.
+
+<CardGroup cols={3}>
+  <Card title="Windows" icon="windows">
+    ```
+    %APPDATA%\Balatro\logs\bmm_*.log
+    ```
+
+    **Full path example:**
+    ```
+    C:\Users\YourName\AppData\Roaming\Balatro\logs\bmm_2026-03-14_10-30-45.log
+    ```
+  </Card>
+
+  <Card title="macOS" icon="apple">
+    ```
+    ~/Library/Application Support/Balatro/logs/bmm_*.log
+    ```
+
+    **Full path example:**
+    ```
+    /Users/YourName/Library/Application Support/Balatro/logs/bmm_2026-03-14_10-30-45.log
+    ```
+  </Card>
+
+  <Card title="Linux" icon="linux">
+    ```
+    ~/.config/Balatro/logs/bmm_*.log
+    ```
+
+    **Full path example:**
+    ```
+    /home/yourname/.config/Balatro/logs/bmm_2026-03-14_10-30-45.log
+    ```
+  </Card>
+</CardGroup>
+
+<Info>
+  On **Linux with Flatpak**, logs are still written to `~/.config/Balatro/logs/` even inside the sandbox, so they're accessible from the host system.
+</Info>
+
+### Linux Prefix Launch Logs
+
+When using a custom Linux prefix (Proton/Steam), additional launch logs are written to:
+
+```bash
+~/.config/Balatro/logs/prefix-launch.log
+```
+
+This log captures stdout/stderr from the prefix command and is useful for debugging Proton/Wine issues.
+
+## Log Format
+
+Logs use a structured format with timestamps, log levels, module names, and messages:
+
+```log
+[2026-03-14 10:30:45] INFO  [bmm_lib::logging] Logging system initialized at 2026-03-14 10:30:45
+[2026-03-14 10:30:45] INFO  [bmm_lib::logging] Log file: /home/user/.config/Balatro/logs/bmm_2026-03-14_10-30-45.log
+[2026-03-14 10:30:45] DEBUG [bmm_lib::logging] Debug logging is enabled
+[2026-03-14 10:30:46] INFO  [bmm_lib::database] Database initialized successfully
+[2026-03-14 10:30:47] WARN  [bmm_lib::installer] Mod install rate limited (attempt 1/3), retrying in 500ms
+[2026-03-14 10:30:50] ERROR [bmm_lib::finder] Could not read steam install path from Registry!
+```
+
+### Log Level Colors (Console)
+
+When viewing logs in the console (during development), levels are color-coded:
+
+| Level | Color | Description |
+|-------|-------|-------------|
+| `ERROR` | <span style={{color: 'red'}}>Red</span> | Critical errors that prevent operations |
+| `WARN` | <span style={{color: 'yellow'}}>Yellow</span> | Warnings that don't stop execution |
+| `INFO` | <span style={{color: 'green'}}>Green</span> | General informational messages |
+| `DEBUG` | <span style={{color: 'cyan'}}>Cyan</span> | Detailed debugging information |
+| `TRACE` | <span style={{color: 'magenta'}}>Magenta</span> | Very verbose trace-level logs |
+
+<Note>
+  Log files contain plain text (no color codes), making them easy to search and share.
+</Note>
+
+## Log Rotation
+
+The mod manager automatically manages log files to prevent disk space issues:
+
+- **New log file** created on each launch with timestamp: `bmm_YYYY-MM-DD_HH-MM-SS.log`
+- **Keeps last 10 logs** — older logs are automatically deleted
+- **No size limit** per file (but log files are typically 1-10 MB for normal usage)
+
+<Steps>
+  <Step title="Launch creates new log">
+    Each time you start the mod manager, a new log file is created with the current timestamp.
+  </Step>
+
+  <Step title="Old logs cleaned up">
+    The logging system checks the logs directory and removes log files beyond the 10 most recent ones.
+  </Step>
+
+  <Step title="Log directory created if missing">
+    If the logs directory doesn't exist, it's automatically created at `<config_dir>/Balatro/logs/`.
+  </Step>
+</Steps>
+
+## Reading Logs
+
+### Finding Recent Errors
+
+To quickly find errors in a log file:
+
+<Tabs>
+  <Tab title="Command Line">
+    ```bash
+    # Linux/macOS
+    grep ERROR ~/.config/Balatro/logs/bmm_*.log | tail -20
+
+    # Windows (PowerShell)
+    Select-String -Path "$env:APPDATA\Balatro\logs\bmm_*.log" -Pattern "ERROR" | Select-Object -Last 20
+    ```
+  </Tab>
+
+  <Tab title="Text Editor">
+    1. Open the most recent log file in your text editor
+    2. Search for `ERROR` or `WARN` (Ctrl+F / Cmd+F)
+    3. Review the context around each error
+  </Tab>
+
+  <Tab title="Visual Studio Code">
+    1. Open the logs directory in VS Code
+    2. Use the search sidebar (Ctrl+Shift+F / Cmd+Shift+F)
+    3. Search for error patterns across all log files
+    4. VS Code will syntax highlight log files if you have a log extension installed
+  </Tab>
+</Tabs>
+
+### Common Error Patterns
+
+Here are some error patterns to look for and what they mean:
+
+<AccordionGroup>
+  <Accordion title="Database Errors" icon="database">
+    ```log
+    [ERROR] [bmm_lib::database] Database initialization failed: unable to open database file
+    [ERROR] [bmm_lib::database] Database error: UNIQUE constraint failed: mods.name
+    [ERROR] [bmm_lib::database] Database transaction failed: database is locked
+    ```
+
+    **Meaning:**
+    - Database file corrupted or locked by another process
+    - Constraint violations (duplicate mod entries)
+    - Multiple instances of mod manager running
+
+    **See:** [Database Errors](/troubleshooting/common-issues#mod-installation-errors) in Common Issues
+  </Accordion>
+
+  <Accordion title="File System Errors" icon="folder">
+    ```log
+    [ERROR] [bmm_lib::installer] Failed to read file '/path/to/mod': Permission denied
+    [ERROR] [bmm_lib::finder] Directory not found: '/path/to/Balatro'
+    [ERROR] [bmm_lib::installer] Failed to write file '/path/to/mod.lua': No space left on device
+    ```
+
+    **Meaning:**
+    - Permission issues (run as admin or fix folder permissions)
+    - Balatro installation moved or deleted
+    - Disk full (free up space)
+
+    **Tip:** Look at the `path` value to see exactly which file or directory is causing the issue.
+  </Accordion>
+
+  <Accordion title="Network Errors" icon="wifi">
+    ```log
+    [ERROR] [bmm_lib::installer] Network error: error sending request for url (https://...)
+    [WARN]  [bmm_lib::installer] Mod install rate limited (attempt 2/3), retrying in 1s
+    [ERROR] [bmm_lib::cache] Failed to fetch mod index: HTTP 404 Not Found
+    ```
+
+    **Meaning:**
+    - Connection timeout or DNS failure
+    - Rate limiting (auto-retry up to 3 times)
+    - Remote resource not found (mod removed or URL changed)
+
+    **Note:** `WARN` for rate limiting is normal — the manager retries automatically.
+  </Accordion>
+
+  <Accordion title="Mod Install Errors" icon="download">
+    ```log
+    [ERROR] [bmm_lib::installer] Failed to install mod 'Steamodded': Archive extraction failed
+    [ERROR] [bmm_lib::installer] Archive extraction aborted: exceeds 100MB limit
+    [ERROR] [bmm_lib::installer] Mod 'CustomMod' version '1.0.0' not found
+    ```
+
+    **Meaning:**
+    - Corrupted or invalid archive format
+    - Archive size exceeds safety limit
+    - Specific mod version doesn't exist
+
+    **Solution:** Try a different version or re-download the mod.
+  </Accordion>
+
+  <Accordion title="Launch Errors" icon="rocket">
+    ```log
+    [ERROR] [balatro_mod_manager::commands] Failed to launch via prefix: No such file or directory
+    [ERROR] [balatro_mod_manager::commands] Prefix executable not found: /path/to/steam
+    [WARN]  [bmm_lib::lovely] LOVE is not installed and auto-download failed
+    ```
+
+    **Meaning:**
+    - Invalid Linux prefix command or missing executable
+    - Balatro executable not found at configured path
+    - (Linux) LOVE runtime not installed and auto-download failed
+
+    **See:** [Launch Issues](/troubleshooting/common-issues#launch-issues) in Common Issues
+  </Accordion>
+</AccordionGroup>
+
+## Log Levels Explained
+
+The mod manager uses different log levels for different types of messages:
+
+### ERROR
+
+**Critical failures** that prevent an operation from completing:
+
+```log
+[ERROR] Failed to install mod 'Example': download URL not reachable
+[ERROR] Database initialization failed: unable to open database file
+```
+
+- Operation failed and user action is required
+- Always investigate ERROR messages when troubleshooting
+
+### WARN
+
+**Non-critical issues** that might affect behavior but don't stop execution:
+
+```log
+[WARN] Mod install rate limited (attempt 1/3), retrying in 500ms
+[WARN] LOVE mods path already exists and is not a symlink
+[WARN] Vanilla mode requested but Lovely version doesn't support --vanilla flag
+```
+
+- Operation continues despite the warning
+- May indicate degraded functionality or automatic fallback
+
+### INFO
+
+**Normal operations** and state changes:
+
+```log
+[INFO] Logging system initialized at 2026-03-14 10:30:45
+[INFO] Database initialized successfully
+[INFO] Launching Balatro via LOVE (mode: modded)
+```
+
+- Confirms successful operations
+- Useful for understanding the sequence of events
+
+### DEBUG
+
+**Detailed information** for debugging (enabled by default):
+
+```log
+[DEBUG] Debug logging is enabled
+[DEBUG] Returning 3 cached Balatro paths
+[DEBUG] Balatro paths cache invalidated
+```
+
+- Low-level details about internal state
+- Helpful for developers and advanced troubleshooting
+
+### TRACE
+
+**Very verbose** trace-level logs (typically disabled):
+
+- Function entry/exit points
+- Variable values and state changes
+- Not typically needed for user troubleshooting
+
+<Tip>
+  Most troubleshooting only requires reviewing **ERROR** and **WARN** messages. INFO provides context, while DEBUG is useful for deeper investigation.
+</Tip>
+
+## Sharing Logs for Bug Reports
+
+When reporting a bug, include relevant log excerpts:
+
+<Steps>
+  <Step title="Find the most recent log">
+    Look in the logs directory for the latest `bmm_*.log` file (sorted by timestamp in filename).
+  </Step>
+
+  <Step title="Identify relevant section">
+    Find the error or warning messages around the time the issue occurred. Include a few lines before and after for context.
+  </Step>
+
+  <Step title="Sanitize sensitive info">
+    Remove or redact any personal information like:
+    - Absolute file paths with your username
+    - API keys or tokens (unlikely in BMM logs, but check)
+    - Any other personally identifiable information
+  </Step>
+
+  <Step title="Include log excerpt in bug report">
+    Paste the relevant log lines in a code block in your bug report. See [Reporting Bugs](/troubleshooting/reporting-bugs) for the full template.
+  </Step>
+</Steps>
+
+### Example Log Excerpt for Bug Report
+
+````markdown
+**Log excerpt:**
+```log
+[2026-03-14 10:35:12] INFO  [bmm_lib::installer] Installing mod from URL: https://github.com/...
+[2026-03-14 10:35:13] WARN  [bmm_lib::installer] Mod install rate limited (attempt 1/3), retrying in 500ms
+[2026-03-14 10:35:15] WARN  [bmm_lib::installer] Mod install rate limited (attempt 2/3), retrying in 1s
+[2026-03-14 10:35:17] WARN  [bmm_lib::installer] Mod install rate limited (attempt 3/3), retrying in 2s
+[2026-03-14 10:35:20] ERROR [bmm_lib::installer] Failed to install mod 'Example': Rate limit exceeded
+```
+````
+
+<Warning>
+  **Do not share your entire log file publicly** if it contains sensitive information. Only include the relevant excerpts needed to diagnose the issue.
+</Warning>
+
+## Advanced Debugging
+
+### Enabling Verbose Logging
+
+The mod manager enables DEBUG logging by default. For even more detail:
+
+**Set environment variable before launching:**
+
+```bash
+# Linux/macOS
+export RUST_LOG=trace
+./balatro-mod-manager
+
+# Windows (PowerShell)
+$env:RUST_LOG="trace"
+.\balatro-mod-manager.exe
+```
+
+This enables TRACE-level logging, which includes very verbose output from all modules.
+
+### Filtering Logs by Module
+
+To reduce noise and focus on specific modules:
+
+```bash
+# Only show installer logs at DEBUG level or higher
+export RUST_LOG=bmm_lib::installer=debug
+
+# Show all BMM logs at DEBUG, but third-party at WARN
+export RUST_LOG=bmm_lib=debug,warn
+
+# Discord RPC logs are filtered to WARN by default to reduce noise
+# They can be re-enabled with:
+export RUST_LOG=discord_rich_presence=debug
+```
+
+<Info>
+  The mod manager filters `discord_rich_presence` module logs to `WARN` level by default (see `logging.rs:84`) to avoid cluttering logs with Discord connection events.
+</Info>
+
+### Real-time Log Monitoring
+
+Watch logs in real-time as the mod manager runs:
+
+<Tabs>
+  <Tab title="Linux/macOS">
+    ```bash
+    # Follow the most recent log file
+    tail -f ~/.config/Balatro/logs/bmm_*.log | grep -E "ERROR|WARN"
+
+    # Or monitor all logs in the directory
+    tail -f ~/.config/Balatro/logs/*.log
+    ```
+  </Tab>
+
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    # Follow the most recent log file
+    Get-Content "$env:APPDATA\Balatro\logs\bmm_*.log" -Wait -Tail 20
+    ```
+  </Tab>
+</Tabs>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Common Issues" icon="triangle-exclamation" href="/troubleshooting/common-issues">
+    Solutions to frequently encountered problems
+  </Card>
+
+  <Card title="Reporting Bugs" icon="bug" href="/troubleshooting/reporting-bugs">
+    How to file a detailed bug report with logs
+  </Card>
+</CardGroup>

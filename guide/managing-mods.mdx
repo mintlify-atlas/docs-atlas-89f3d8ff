@@ -1,0 +1,484 @@
+---
+title: 'Managing Mods'
+description: 'Enable, disable, update, and organize your installed mods'
+icon: 'sliders'
+---
+
+## Overview
+
+Once mods are installed, Balatro Mod Manager provides comprehensive tools to control their behavior. Enable or disable mods on the fly, check for updates, and manage your entire mod library from a single interface.
+
+## Enable/Disable System
+
+The enable/disable system uses Lovely's `.lovelyignore` marker files to control which mods are loaded.
+
+### How It Works
+
+<Steps>
+  <Step title="Marker File Creation">
+    When you disable a mod, the app creates `.lovelyignore` files in the mod directory.
+  </Step>
+  <Step title="Lovely Detection">
+    Lovely (the mod loader) skips any directory containing a `.lovelyignore` file.
+  </Step>
+  <Step title="Recursive Application">
+    For mods with subdirectories, markers are created in both the root and all subdirectories.
+  </Step>
+  <Step title="Instant Effect">
+    Changes take effect the next time you launch Balatro - no file moves required.
+  </Step>
+</Steps>
+
+<Info>
+  This system preserves your mod files in place, making it safe and fast to enable/disable mods without risk of data loss.
+</Info>
+
+### Toggle Implementation
+
+From `mods.rs:8-62`, the enable/disable logic:
+
+```rust
+fn set_mod_enabled_at_path(mod_dir: &Path, enabled: bool) -> Result<(), String> {
+    if !mod_dir.exists() {
+        return Err(format!("Mod path does not exist: {}", mod_dir.display()));
+    }
+
+    let entries: Vec<_> = fs::read_dir(mod_dir)?
+        .collect::<Result<_, _>>()?;
+
+    let ignore_file_path = mod_dir.join(".lovelyignore");
+
+    if enabled {
+        // Remove .lovelyignore files
+        entries
+            .par_iter()
+            .filter(|entry| entry.path().is_dir())
+            .try_for_each(|entry| {
+                let ignore_path = entry.path().join(".lovelyignore");
+                if ignore_path.exists() {
+                    fs::remove_file(&ignore_path)
+                } else {
+                    Ok(())
+                }
+            })?;
+
+        if ignore_file_path.exists() {
+            fs::remove_file(&ignore_file_path)?;
+        }
+    } else {
+        // Create .lovelyignore files
+        entries
+            .par_iter()
+            .filter(|entry| entry.path().is_dir())
+            .try_for_each(|entry| {
+                fs::write(entry.path().join(".lovelyignore"), "")
+            })?;
+
+        fs::write(&ignore_file_path, "")?;
+    }
+
+    Ok(())
+}
+```
+
+<Tip>
+  The implementation uses Rayon for parallel processing, making bulk enable/disable operations fast even with many subdirectories.
+</Tip>
+
+## Checking Mod Status
+
+The app provides multiple ways to check if a mod is enabled:
+
+### Single Mod Check
+
+```typescript
+// From ModView.svelte:1104-1126
+async function checkModEnabled(modName: string) {
+  try {
+    const enabled = await invoke<boolean>("is_mod_enabled", {
+      modName,
+    });
+
+    modEnabledStore.update((enabledMods: Record<string, boolean>) => ({
+      ...enabledMods,
+      [modName]: enabled,
+    }));
+
+    isEnabled = enabled;
+  } catch (error) {
+    console.error(`Failed to check if mod ${modName} is enabled:`, error);
+    // Default to enabled on error
+    modEnabledStore.update((enabledMods: Record<string, boolean>) => ({
+      ...enabledMods,
+      [modName]: true,
+    }));
+    isEnabled = true;
+  }
+}
+```
+
+### Batch Status Check
+
+For the Installed Mods view, status is checked in bulk:
+
+```rust
+// From mods.rs:171-207
+pub async fn enabled_state_map(
+    state: tauri::State<'_, AppState>,
+    local_paths: Option<Vec<String>>,
+) -> Result<HashMap<String, bool>, String> {
+    let mut out: HashMap<String, bool> = HashMap::new();
+
+    // DB-installed mods
+    let db = state.db.lock().unwrap_or_else(|e| e.into_inner());
+    let installed_mods = db.get_installed_mods()?;
+    for m in installed_mods {
+        let p = PathBuf::from(&m.path);
+        let ignore = p.join(".lovelyignore");
+        let enabled = !ignore.exists();
+        out.insert(m.name, enabled);
+    }
+
+    // Local mods passed from frontend
+    if let Some(paths) = local_paths {
+        for p in paths {
+            let path = PathBuf::from(&p);
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_string();
+            if name.is_empty() { continue; }
+            let ignore = path.join(".lovelyignore");
+            let enabled = !ignore.exists();
+            out.insert(name, enabled);
+        }
+    }
+
+    Ok(out)
+}
+```
+
+## Bulk Operations
+
+Manage multiple mods at once with bulk actions:
+
+### Multi-Select Interface
+
+In the Installed Mods view:
+
+<Steps>
+  <Step title="Select Mods">
+    Click mod cards to select them. Selected mods show a checkmark.
+  </Step>
+  <Step title="Bulk Action Bar">
+    The bulk action bar appears at the bottom with available actions.
+  </Step>
+  <Step title="Choose Action">
+    Click Enable All, Disable All, or Uninstall Selected.
+  </Step>
+  <Step title="Confirm">
+    For destructive actions like uninstall, a confirmation dialog appears.
+  </Step>
+</Steps>
+
+### Batch Toggle Implementation
+
+```rust
+// From mods.rs:121-168
+pub async fn toggle_mods_enabled_batch(
+    state: tauri::State<'_, AppState>,
+    enabled: Vec<String>,
+    disabled: Vec<String>,
+    local_paths: Option<Vec<String>>,
+) -> Result<(), String> {
+    let db = state.db.lock().unwrap_or_else(|e| e.into_inner());
+    let installed_mods = db.get_installed_mods()?;
+    let path_map: HashMap<String, PathBuf> = installed_mods
+        .into_iter()
+        .map(|m| (m.name, PathBuf::from(m.path)))
+        .collect();
+
+    let mut tasks: Vec<(PathBuf, bool)> = Vec::new();
+    for name in enabled {
+        if let Some(path) = path_map.get(&name) {
+            tasks.push((path.clone(), true));
+        }
+    }
+    for name in disabled {
+        if let Some(path) = path_map.get(&name) {
+            tasks.push((path.clone(), false));
+        }
+    }
+
+    // Process all toggles in parallel using Rayon
+    tasks
+        .par_iter()
+        .try_for_each(|(path, enabled)| set_mod_enabled_at_path(path, *enabled))?;
+
+    Ok(())
+}
+```
+
+<Info>
+  Bulk operations use parallel processing to handle large selections efficiently, even when toggling 50+ mods at once.
+</Info>
+
+## Update Detection
+
+The app automatically checks for mod updates by comparing installed versions with catalog versions.
+
+### Update Check Logic
+
+From the codebase, updates are detected by:
+
+1. **Version Comparison** - Comparing stored `current_version` in database with `version` from catalog
+2. **Repository Polling** - Periodic checks against the mod repository for new releases
+3. **Visual Indicators** - Update badge appears on mod cards when an update is available
+
+<CardGroup cols={2}>
+  <Card title="Update Badge" icon="arrow-up-right-dots">
+    Installed mods with updates show a blue refresh icon and "Update Mod" button.
+  </Card>
+  <Card title="Update All" icon="arrows-rotate">
+    Click "Update All" in the Installed Mods toolbar to update all mods with available updates.
+  </Card>
+</CardGroup>
+
+### Update Process
+
+From `Mods.svelte:943-1079`, the update flow:
+
+```typescript
+async function updateAllMods(e?: Event) {
+  if (e) e.preventDefault();
+  if (isUpdatingAll) return;
+
+  isUpdatingAll = true;
+  try {
+    // Get all installed mods with available updates
+    const modsToUpdate = $modsStore.filter(
+      (mod) =>
+        $installationStatus[mod.title] && $updateAvailableStore[mod.title],
+    );
+
+    if (modsToUpdate.length === 0) {
+      addMessage("No updates available.", "info");
+      return;
+    }
+
+    // Capture enabled states before update
+    const previousEnabledMap: Record<string, boolean> = Object.fromEntries(
+      await Promise.all(
+        modsToUpdate.map(async (mod) => {
+          const enabled = await invoke<boolean>("is_mod_enabled", {
+            modName: mod.title,
+          });
+          return [mod.title, enabled] as const;
+        }),
+      ),
+    );
+
+    // Run all updates in parallel
+    const updateResults = await Promise.allSettled(
+      modsToUpdate.map(async (mod) => {
+        // Download and install new version
+        const installedPath = await invoke<string>("install_mod", {
+          url: mod.downloadURL,
+          folderName: mod.folderName || mod.title.replace(/\s+/g, ""),
+        });
+
+        await invoke("add_installed_mod", {
+          name: mod.title,
+          path: installedPath,
+          dependencies: mod.requires_steamodded ? ["Steamodded"] : [],
+          currentVersion: mod.version || "",
+        });
+
+        return mod.title;
+      }),
+    );
+
+    // Restore enabled states after update
+    for (const result of updateResults) {
+      if (result.status === "fulfilled") {
+        const modTitle = result.value;
+        modEnabledStore.update((s) => ({
+          ...s,
+          [modTitle]: previousEnabledMap[modTitle],
+        }));
+      }
+    }
+  } finally {
+    isUpdatingAll = false;
+  }
+}
+```
+
+<Warning>
+  Updates replace mod files. Custom edits to mod files will be lost. Consider backing up modified mods before updating.
+</Warning>
+
+## Organized Views
+
+The Installed Mods view separates enabled and disabled mods for clarity:
+
+### Enabled Mods Section
+
+Shows all active mods:
+- **Enable/Disable Toggle** - Quick access to toggle button
+- **Update Badge** - Visible if update available
+- **Actions** - Update, uninstall, add to collection
+
+### Disabled Mods Section
+
+Shows inactive mods:
+- Grayed out visual style
+- Same action buttons as enabled mods
+- Easy re-enable with toggle button
+
+### Local Mods Section
+
+Manually installed mods detected in the Mods folder:
+
+```typescript
+// From Mods.svelte:485-510
+async function getLocalMods() {
+  if ($currentCategory === "Installed Mods") {
+    isLoadingLocalMods = true;
+    try {
+      localMods = await invoke("get_detected_local_mods");
+      await refreshStateSummary();
+    } catch (error) {
+      console.error("Failed to load local mods:", error);
+      addMessage(`Failed to load local mods: ${error}`, "error");
+      localMods = [];
+    } finally {
+      isLoadingLocalMods = false;
+    }
+  }
+}
+```
+
+Local mods display:
+- Mod ID and name
+- Author information
+- Dependencies and conflicts
+- Enable/disable toggle
+- Uninstall action
+
+<Info>
+  Local mods are detected automatically by scanning the Mods directory for valid mod structures. They're tracked separately from catalog mods.
+</Info>
+
+## State Persistence
+
+Mod enabled states are persisted in the file system through `.lovelyignore` markers:
+
+- **No database required** - State is stored directly in mod folders
+- **Survives reinstalls** - If you uninstall/reinstall the mod manager, states are preserved
+- **Manual compatibility** - Works with manually edited .lovelyignore files
+
+<Tip>
+  You can manually create or delete `.lovelyignore` files to enable/disable mods outside the app. The app will detect and sync these changes.
+</Tip>
+
+## Collections Integration
+
+Mods can be organized into collections for easy enable/disable:
+
+<Steps>
+  <Step title="Create Collection">
+    Group related mods into a named collection.
+  </Step>
+  <Step title="Activate Collection">
+    Toggle the collection to enable all its mods at once.
+  </Step>
+  <Step title="Automatic Management">
+    When activating a collection, other mods are automatically disabled (unless in another active collection).
+  </Step>
+</Steps>
+
+See the [Mod Collections](/guide/mod-collections) page for detailed information.
+
+## Performance Considerations
+
+### Background Sync
+
+The app listens for file system changes:
+
+```typescript
+// From Mods.svelte:839-852
+listen("installed-mods-changed", async () => {
+  if ($currentCategory === "Installed Mods") {
+    try {
+      await scheduleInstalledModsRefresh();
+    } catch (err) {
+      console.warn("Failed to refresh installed mods:", err);
+    }
+  }
+})
+```
+
+<Info>
+  When mods are installed/uninstalled, the app emits an `installed-mods-changed` event to trigger UI refresh across all views.
+</Info>
+
+### Render Optimization
+
+For large mod libraries, the UI uses virtual scrolling:
+
+```typescript
+// From Mods.svelte:787-826
+observerLocal = new IntersectionObserver(
+  (entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        const localMax = Math.max(
+          enabledLocalMods.length,
+          disabledLocalMods.length,
+        );
+        renderLimitLocal = Math.min(
+          renderLimitLocal + renderChunkLocal,
+          localMax,
+        );
+      }
+    }
+  },
+  { root: modsScrollContainer, rootMargin: "200px" },
+);
+```
+
+## Troubleshooting
+
+<Accordion title="Toggle button doesn't work">
+  This usually means the app can't access the mod directory. Check that:
+  - The mod folder exists at the path shown
+  - You have write permissions to the Mods directory
+  - No other program is locking the files
+</Accordion>
+
+<Accordion title="Mod still loads after disabling">
+  Lovely caches mod states. Try:
+  - Completely close Balatro
+  - Verify the `.lovelyignore` file exists in the mod folder
+  - Restart Balatro in modded mode
+</Accordion>
+
+<Accordion title="Update fails with error">
+  Updates follow the same process as installation. Common issues:
+  - Rate limiting (wait and retry)
+  - File locks on Windows (close Balatro and retry)
+  - Network connectivity (check your internet connection)
+</Accordion>
+
+<Accordion title="Bulk actions hang">
+  Very large selections (100+ mods) may take time to process. The app uses parallel processing, but Windows file I/O can still be slow. Wait for the operation to complete - it should finish within 30 seconds even for large batches.
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Mod Collections" icon="layer-group" href="/guide/mod-collections">
+    Organize mods into reusable collections
+  </Card>
+  <Card title="Browsing Mods" icon="search" href="/guide/browsing-mods">
+    Discover new mods to install
+  </Card>
+</CardGroup>

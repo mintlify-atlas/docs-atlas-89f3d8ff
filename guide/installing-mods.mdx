@@ -1,0 +1,410 @@
+---
+title: 'Installing Mods'
+description: 'Install mods from the catalog with automatic dependency resolution'
+icon: 'download'
+---
+
+## Overview
+
+Balatro Mod Manager handles the complete mod installation process, from downloading archives to extracting them into your Mods directory. The system automatically resolves dependencies and manages mod frameworks like Steamodded and Talisman.
+
+## Installation Process
+
+<Steps>
+  <Step title="Select a Mod">
+    Browse or search for a mod in the catalog, then click on the mod card to view details.
+  </Step>
+  <Step title="Check Dependencies">
+    The app automatically checks if required dependencies (Steamodded or Talisman) are installed.
+  </Step>
+  <Step title="Download & Extract">
+    Click the Download button. The mod archive is downloaded and extracted to your Mods folder.
+  </Step>
+  <Step title="Verify Installation">
+    The mod appears in your "Installed Mods" list and is tracked in the database.
+  </Step>
+</Steps>
+
+## Supported Archive Formats
+
+The installer supports multiple archive formats:
+
+| Format | Extension | Detection Method |
+|--------|-----------|------------------|
+| **ZIP** | `.zip` | Magic bytes `PK\x03\x04` |
+| **Tarball** | `.tar` | USTAR signature at offset 257 |
+| **Gzipped Tar** | `.tar.gz`, `.tgz` | Gzip magic `\x1F\x8B` |
+
+<Info>
+  Archive format is detected using magic bytes, not file extensions. This prevents attacks using misleading filenames.
+</Info>
+
+### Archive Detection
+
+From `installer.rs:400-462`, the detection logic:
+
+```rust
+fn guess_archive_kind(
+    bytes: &bytes::Bytes,
+    url: &str,
+    content_type: Option<&str>,
+    cd_filename: Option<&str>,
+) -> Option<ArchiveKind> {
+    // 1) Strongest: manual magic-byte checks
+    if has_zip_magic(bytes) {
+        return Some(ArchiveKind::Zip);
+    }
+    if has_gzip_magic(bytes) {
+        return Some(ArchiveKind::TarGz);
+    }
+    if has_tar_ustar(bytes) {
+        return Some(ArchiveKind::Tar);
+    }
+    // 2) Fallback to content-type and filename hints
+    // ...
+}
+```
+
+## Dependency Resolution
+
+Many mods require framework mods to function. The app handles this automatically.
+
+### Framework Mods
+
+<CardGroup cols={2}>
+  <Card title="Steamodded" icon="layer-group">
+    The primary modding API for Balatro. Most content mods require this.
+  </Card>
+  <Card title="Talisman" icon="wand-magic-sparkles">
+    Alternative modding framework with additional features.
+  </Card>
+</CardGroup>
+
+### Dependency Check Flow
+
+When installing a mod with dependencies:
+
+<Steps>
+  <Step title="Read Requirements">
+    The app checks the mod's `requires_steamodded` and `requires_talisman` flags.
+  </Step>
+  <Step title="Verify Installation">
+    Queries the database to see if required frameworks are already installed.
+  </Step>
+  <Step title="Prompt User">
+    If dependencies are missing, shows a popup listing what's needed.
+  </Step>
+  <Step title="Install Dependencies">
+    User can install missing dependencies directly from the prompt.
+  </Step>
+</Steps>
+
+From `SearchView.svelte:183-214`, the dependency check:
+
+```typescript
+if (modToInstall.requires_steamodded || modToInstall.requires_talisman) {
+  const steamoddedInstalled = modToInstall.requires_steamodded
+    ? await invoke<boolean>("check_mod_installation", {
+        modType: "Steamodded",
+      })
+    : true;
+
+  const talismanInstalled = modToInstall.requires_talisman
+    ? await invoke<boolean>("check_mod_installation", {
+        modType: "Talisman",
+      })
+    : true;
+
+  if (
+    (modToInstall.requires_steamodded && !steamoddedInstalled) ||
+    (modToInstall.requires_talisman && !talismanInstalled)
+  ) {
+    // Show dependency popup and pass download function
+    onCheckDependencies?.(
+      {
+        steamodded: modToInstall.requires_steamodded && !steamoddedInstalled,
+        talisman: modToInstall.requires_talisman && !talismanInstalled,
+      },
+      performDownload,
+    );
+    return;
+  }
+}
+```
+
+<Warning>
+  If you proceed without installing dependencies, the mod may not work correctly or cause Balatro to crash.
+</Warning>
+
+## Framework Versioning
+
+Steamodded and Talisman support multiple versions:
+
+### Version Selection
+
+<Accordion title="Steamodded Versions">
+  When installing Steamodded, you can choose from:
+  
+  - **Latest (could be unstable)** - The newest version from GitHub releases
+  - **Specific releases** - Tagged versions (e.g., `v1.0.0-ALPHA-0820a`)
+  
+  Versions are fetched from the GitHub API and cached for 1 hour:
+  
+  ```typescript
+  // From ModView.svelte:423-467
+  const cached = await invoke<[string[], number]>("load_versions_cache", {
+    modType: "steamodded",
+  });
+  if (cached) {
+    const [cachedVers, cachedTs] = cached;
+    if (Date.now() - cachedTs * 1000 < VERSION_CACHE_DURATION) {
+      steamoddedVersions = cachedVers;
+      return;
+    }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Talisman Versions">
+  Similar to Steamodded, Talisman offers:
+  
+  - Latest release (recommended)
+  - Specific version tags
+  
+  Version metadata is cached to reduce API calls.
+</Accordion>
+
+## Installation Internals
+
+### Download Process
+
+The download system is optimized to handle large files efficiently:
+
+```rust
+// From installer.rs:136-181
+let temp_file_path = temp_dir.join(format!(
+    "bmm_download_{}_{}.tmp",
+    std::process::id(),
+    unique_id
+));
+
+let mut temp_file = tokio::fs::File::create(&temp_file_path).await?;
+
+// Stream download to avoid loading entire archive into memory
+while let Some(chunk) = response.chunk().await? {
+    // Capture first 512 bytes for magic detection
+    if magic_bytes.len() < 512 {
+        let needed = 512 - magic_bytes.len();
+        let take = needed.min(chunk.len());
+        magic_bytes.extend_from_slice(&chunk[..take]);
+    }
+
+    temp_file.write_all(&chunk).await?;
+    total_bytes += chunk.len() as u64;
+}
+```
+
+<Info>
+  Downloads stream to a temporary file (not memory) to reduce RAM usage. Peak memory is ~64KB regardless of archive size.
+</Info>
+
+### Extraction Process
+
+After download, the archive is extracted:
+
+<Steps>
+  <Step title="Detect Format">
+    Read magic bytes from the downloaded file to determine archive type.
+  </Step>
+  <Step title="Staging Directory">
+    Extract to a temporary `.staging_<modname>` folder for atomic installation.
+  </Step>
+  <Step title="Handle Structure">
+    If archive contains a single root folder, unwrap it. If it has root files, extract directly.
+  </Step>
+  <Step title="Atomic Rename">
+    Rename staging directory to final mod name. This ensures partial extractions don't corrupt state.
+  </Step>
+</Steps>
+
+### Security Measures
+
+The installer includes multiple security checks:
+
+<CardGroup cols={2}>
+  <Card title="Path Traversal Prevention" icon="shield-halved">
+    Archives with `..` components or absolute paths are rejected.
+  </Card>
+  <Card title="Size Limits" icon="ruler">
+    Maximum decompressed size: 2 GB
+    Maximum files per archive: 10,000
+  </Card>
+</CardGroup>
+
+From `installer.rs:353-383`:
+
+```rust
+fn sanitize_archive_path(entry_name: &str) -> Option<PathBuf> {
+    let path = std::path::Path::new(entry_name);
+    let mut result = PathBuf::new();
+
+    for component in path.components() {
+        match component {
+            std::path::Component::Normal(name) => {
+                result.push(name);
+            }
+            std::path::Component::ParentDir => {
+                // Reject paths with ".." - this is a traversal attempt
+                return None;
+            }
+            std::path::Component::Prefix(_) | std::path::Component::RootDir => {
+                // Reject absolute paths
+                return None;
+            }
+            _ => {} // Skip current dir (".") components
+        }
+    }
+
+    if result.as_os_str().is_empty() {
+        None
+    } else {
+        Some(result)
+    }
+}
+```
+
+## Database Tracking
+
+After successful installation, the mod is registered in the SQLite database:
+
+```typescript
+// From SearchView.svelte:156-160
+await invoke("add_installed_mod", {
+  name: modToInstall.title,
+  path: installedPath,
+  dependencies,
+  currentVersion: modToInstall.version || "",
+});
+```
+
+The database stores:
+- Mod name
+- Installation path
+- Dependency list (Steamodded, Talisman)
+- Current version
+
+## Rate Limiting
+
+The installer implements automatic retry with exponential backoff for rate-limited downloads:
+
+```rust
+// From install.rs:1079-1137
+const INSTALL_MAX_RETRIES: u32 = 3;
+
+for attempt in 1..=INSTALL_MAX_RETRIES {
+    match bmm_lib::installer::install_mod(resolved_url, folder_name_opt.clone()).await {
+        Ok(path) => {
+            return Ok(path);
+        }
+        Err(e) => {
+            let error_str = e.to_string();
+            if is_rate_limit_error(&error_str) && attempt < INSTALL_MAX_RETRIES {
+                log::warn!(
+                    "Mod install rate limited (attempt {}/{}), retrying in {:?}",
+                    attempt,
+                    INSTALL_MAX_RETRIES,
+                    delay
+                );
+                tokio::time::sleep(delay).await;
+                delay = delay.saturating_mul(2);
+                continue;
+            }
+            return Err(error_str);
+        }
+    }
+}
+```
+
+<Tip>
+  If you see "Rate limited" messages, the app will automatically retry the download with increasing delays (500ms, 1s, 2s).
+</Tip>
+
+## Uninstallation
+
+Removing a mod is straightforward:
+
+<Steps>
+  <Step title="Open Mod View">
+    Click on an installed mod to view its details.
+  </Step>
+  <Step title="Click Remove">
+    Click the trash icon button to uninstall.
+  </Step>
+  <Step title="Dependency Check">
+    If other mods depend on this one, you'll see a warning dialog.
+  </Step>
+  <Step title="Confirm Removal">
+    Choose to force remove, cascade uninstall dependents, or cancel.
+  </Step>
+</Steps>
+
+### Cascade Uninstall
+
+For framework mods (Steamodded/Talisman), the app offers cascade uninstall:
+
+```rust
+// From install.rs:952-994
+pub async fn cascade_uninstall(
+    root_mod: String,
+) -> Result<(), String> {
+    let mut to_uninstall = vec![root_mod.clone()];
+    let mut processed = std::collections::HashSet::new();
+
+    while let Some(current) = to_uninstall.pop() {
+        if processed.contains(&current) {
+            continue;
+        }
+        processed.insert(current.clone());
+
+        let dependents = db.get_dependents(&current)?;
+        to_uninstall.extend(dependents);
+
+        // Remove the mod directory and database entry
+        bmm_lib::installer::uninstall_mod(mod_path.clone()).await?;
+        db.remove_installed_mod_by_name_or_path(&mod_name, &mod_path)?;
+    }
+}
+```
+
+<Warning>
+  Cascade uninstall removes the selected mod AND all mods that depend on it. This action cannot be undone.
+</Warning>
+
+## Troubleshooting
+
+<Accordion title="Download fails with 429 error">
+  This means you've hit the rate limit for the mod repository. The app will automatically retry with exponential backoff. If retries fail, wait a few minutes before trying again.
+</Accordion>
+
+<Accordion title="Extraction fails on Windows">
+  Windows file locks can interfere with extraction. The installer uses retry logic with delays (100ms, 200ms, 400ms, 800ms, 1600ms) to handle this. If it still fails, close any programs that might be accessing the Mods folder.
+</Accordion>
+
+<Accordion title="Mod doesn't appear after install">
+  Check the Installed Mods view - it may take a few seconds for the UI to refresh. If it's still missing, the installation may have failed. Check the app logs for errors.
+</Accordion>
+
+<Accordion title="Dependencies not detected">
+  The app checks for framework mods in the database. If you manually installed Steamodded or Talisman, you may need to re-add them through the app so they're properly registered.
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Managing Mods" icon="sliders" href="/guide/managing-mods">
+    Enable, disable, and update your installed mods
+  </Card>
+  <Card title="Mod Collections" icon="layer-group" href="/guide/mod-collections">
+    Organize mods into reusable collections
+  </Card>
+</CardGroup>

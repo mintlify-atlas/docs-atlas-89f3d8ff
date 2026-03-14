@@ -1,0 +1,312 @@
+---
+title: Lovely Injector
+description: Understanding and managing the Lovely mod injection framework
+---
+
+Lovely is the mod injection framework that enables Balatro mods to work. BMM automatically installs and manages Lovely for you.
+
+## What is Lovely?
+
+Lovely is a game mod loader that injects Lua code into Balatro at runtime, allowing mods to modify game behavior without altering game files. It's the foundation that makes most Balatro mods possible.
+
+<CardGroup cols={2}>
+  <Card title="Transparent" icon="eye">
+    Works invisibly in the background - just launch Balatro
+  </Card>
+  <Card title="Safe" icon="shield">
+    Doesn't modify game files; injection happens at runtime
+  </Card>
+  <Card title="Cross-platform" icon="globe">
+    Supports Windows, macOS, and Linux
+  </Card>
+  <Card title="Auto-updated" icon="arrows-rotate">
+    BMM keeps Lovely up-to-date automatically
+  </Card>
+</CardGroup>
+
+## How Lovely Works
+
+Lovely uses platform-specific injection techniques:
+
+### Windows
+
+- Uses `version.dll` for DLL injection
+- Placed in the Balatro installation directory
+- Loaded automatically when Balatro starts
+
+### macOS
+
+- Uses `liblovely.dylib` with `DYLD_INSERT_LIBRARIES`
+- Stored in `~/Library/Application Support/Balatro/bins/`
+- Environment variable set when launching Balatro
+- Supports both Apple Silicon (ARM64) and Intel (x86_64)
+
+### Linux
+
+**Proton/Wine (Steam Play)**:
+- Uses `version.dll` similar to Windows
+- Cached in `~/.config/Balatro/bins/` and copied to game directory on launch
+- Survives Steam file verification
+
+**Native LOVE**:
+- Uses `liblovely.so` with `LD_PRELOAD`
+- Preloaded when launching via the LOVE binary
+
+<Info>
+  BMM handles all platform-specific details automatically. You don't need to manually install or configure Lovely.
+</Info>
+
+## Installation and Updates
+
+### Automatic Installation
+
+Lovely is installed automatically:
+
+<Steps>
+  <Step title="First launch">
+    When you first launch BMM, it checks for Lovely
+  </Step>
+  
+  <Step title="Download if needed">
+    If Lovely is not found, BMM downloads the latest version from GitHub
+  </Step>
+  
+  <Step title="Platform-specific setup">
+    The appropriate files are installed for your operating system
+  </Step>
+  
+  <Step title="Ready to use">
+    Lovely is ready - just launch Balatro through BMM
+  </Step>
+</Steps>
+
+### Version Detection
+
+BMM automatically detects the latest Lovely version from GitHub releases. This information is:
+
+- **Cached for 24 hours** to avoid blocking game launches
+- **Persisted to disk** to survive app restarts
+- **Refreshed automatically** when the cache expires
+
+<Note>
+  Version checking uses a 24-hour cache to ensure fast startup times and avoid GitHub API rate limits.
+</Note>
+
+### Manual Updates
+
+You can manually update Lovely from the settings:
+
+1. Go to **Settings > Lovely Injector**
+2. Click "Check for Updates" to see if a new version is available
+3. Click "Update Lovely" to download and install the latest version
+4. Restart Balatro for the update to take effect
+
+## Enabling and Disabling Lovely
+
+You can toggle Lovely injection without uninstalling:
+
+<Accordion title="Disabling Lovely">
+  When disabled:
+  - The injector file is renamed to `.disabled` (e.g., `version.dll.disabled`)
+  - Balatro launches without mod support
+  - Your mods remain installed but are not loaded
+  - Useful for testing if an issue is mod-related
+
+  **To disable**: Settings > Lovely Injector > Toggle "Enable Lovely"
+</Accordion>
+
+<Accordion title="Re-enabling Lovely">
+  When re-enabled:
+  - The `.disabled` file is renamed back to the active name
+  - Mods will be loaded on next launch
+  - No reinstallation required
+
+  **To enable**: Settings > Lovely Injector > Toggle "Enable Lovely"
+</Accordion>
+
+<Warning>
+  Disabling Lovely is different from [vanilla launch mode](/guide/launch-modes). Disabling removes the injector file entirely, while vanilla mode uses Lovely's `--vanilla` flag to skip mod loading.
+</Warning>
+
+## Lovely Console
+
+Lovely includes a debug console that displays mod loading information and errors.
+
+### Enabling the Console
+
+<Steps>
+  <Step title="Open settings">
+    Go to **Settings > Lovely Injector**
+  </Step>
+  
+  <Step title="Enable console">
+    Toggle "Show Lovely Console" on
+  </Step>
+  
+  <Step title="Launch Balatro">
+    The console window will appear when Balatro starts
+  </Step>
+</Steps>
+
+### Console Information
+
+The Lovely console displays:
+- Mod loading sequence and timing
+- Lua errors from mods
+- Dependency resolution
+- API hooking information
+- Warnings about mod conflicts
+
+<Tip>
+  Enable the console when troubleshooting mod issues. The output can help identify which mod is causing problems.
+</Tip>
+
+## Lovely Version Compatibility
+
+### Version 0.9.0+
+
+Lovely 0.9.0 introduced several important features:
+
+- **`--vanilla` flag**: Launch without loading mods while keeping injector installed
+- **XDG data directory**: Mods location on Linux changed from `~/.config` to `~/.local/share`
+- **Improved error reporting**: Better diagnostics for mod loading failures
+
+<Info>
+  BMM automatically uses the `--vanilla` flag when available for vanilla launch mode. See [Launch Modes](/guide/launch-modes) for more details.
+</Info>
+
+### Checking Your Version
+
+To see your installed Lovely version:
+1. Go to **Settings > Lovely Injector**
+2. The current version is displayed at the top
+
+## Uninstalling Lovely
+
+If you need to completely remove Lovely:
+
+<Steps>
+  <Step title="Open settings">
+    Go to **Settings > Lovely Injector**
+  </Step>
+  
+  <Step title="Uninstall">
+    Click "Uninstall Lovely"
+  </Step>
+  
+  <Step title="Confirm">
+    Confirm that you want to remove Lovely
+  </Step>
+  
+  <Step title="Restart Balatro">
+    Balatro will launch without mod support
+  </Step>
+</Steps>
+
+<Warning>
+  Uninstalling Lovely will prevent all mods from loading. Your installed mods will remain in the Mods folder but will not be active.
+</Warning>
+
+## Platform-Specific Details
+
+### Windows
+
+<Accordion title="File location">
+  `C:\Program Files (x86)\Steam\steamapps\common\Balatro\version.dll`
+  
+  The DLL is placed directly in the Balatro installation directory.
+</Accordion>
+
+<Accordion title="Steam file verification">
+  Steam file verification will remove `version.dll`. BMM automatically reinstalls it on next launch.
+</Accordion>
+
+### macOS
+
+<Accordion title="File location">
+  `~/Library/Application Support/Balatro/bins/liblovely.dylib`
+  
+  The library is stored in the BMM configuration directory.
+</Accordion>
+
+<Accordion title="Architecture detection">
+  BMM automatically detects whether you're running Apple Silicon (ARM64) or Intel (x86_64) and downloads the correct version.
+</Accordion>
+
+<Accordion title="Permissions">
+  The dylib is set to executable (0755) permissions automatically.
+</Accordion>
+
+### Linux
+
+<Accordion title="Proton/Wine file locations">
+  - **Cached**: `~/.config/Balatro/bins/version.dll`
+  - **Active**: `~/.local/share/Steam/steamapps/common/Balatro/version.dll`
+  
+  The DLL is cached and copied to the game directory on each launch to survive Steam verification.
+</Accordion>
+
+<Accordion title="Native LOVE file location">
+  `~/.config/Balatro/bins/liblovely.so`
+  
+  Used with LD_PRELOAD when launching via the LOVE binary.
+</Accordion>
+
+<Accordion title="Flatpak considerations">
+  If using the Flatpak version of BMM, file paths are under `~/.var/app/io.balatro.ModManager/`. BMM handles this automatically.
+</Accordion>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Mods not loading">
+    **Possible causes**:
+    - Lovely is disabled
+    - Launching Balatro directly instead of through BMM
+    - Lovely file is missing or corrupted
+
+    **Solutions**:
+    1. Check Settings > Lovely Injector to ensure Lovely is enabled
+    2. Launch Balatro using the "Launch Balatro" button in BMM
+    3. Try reinstalling Lovely from settings
+    4. Enable Lovely console to see loading errors
+  </Accordion>
+
+  <Accordion title="Version.dll missing after Steam verification">
+    **Expected behavior**: Steam removes `version.dll` during file verification.
+
+    **Solution**: BMM automatically reinstalls it on next launch. Just use BMM to launch Balatro.
+  </Accordion>
+
+  <Accordion title="Lovely fails to install">
+    **Possible causes**:
+    - Network connectivity issues
+    - GitHub releases unavailable
+    - Insufficient permissions
+
+    **Solutions**:
+    1. Check your internet connection
+    2. Retry the installation
+    3. Ensure BMM has write permissions to the Balatro directory
+    4. Check the BMM logs for detailed error messages
+  </Accordion>
+
+  <Accordion title="Wrong architecture on macOS">
+    If Lovely crashes on macOS:
+    - BMM should auto-detect your architecture
+    - If detection fails, try reinstalling Lovely
+    - Check if you're running BMM through Rosetta (not recommended)
+  </Accordion>
+
+  <Accordion title="Linux: LD_PRELOAD issues">
+    On native Linux (not Proton):
+    - Ensure `liblovely.so` has executable permissions (0755)
+    - Check that the LOVE binary is accessible
+    - Verify the library path is correct in launch arguments
+  </Accordion>
+</AccordionGroup>
+
+## Related Topics
+
+- [Launch Modes](/guide/launch-modes) - Switch between modded and vanilla Balatro
+- [Settings](/guide/settings) - Configure Lovely console and other options

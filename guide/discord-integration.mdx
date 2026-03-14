@@ -1,0 +1,284 @@
+---
+title: Discord Integration
+description: Display your Balatro modding activity in Discord
+---
+
+BMM includes Discord Rich Presence support to show your activity in Discord while using the mod manager.
+
+## What is Discord Rich Presence?
+
+Discord Rich Presence displays your current activity in your Discord profile:
+
+<CardGroup cols={2}>
+  <Card title="Activity Status" icon="circle-play">
+    Shows "Managing Balatro mods" or "Using Balatro Mod Manager"
+  </Card>
+  <Card title="Custom Icon" icon="image">
+    Displays the BMM icon in your Discord status
+  </Card>
+</CardGroup>
+
+Your friends can see that you're using BMM, making it easy to share your modding hobby.
+
+## Enabling Discord RPC
+
+<Steps>
+  <Step title="Open settings">
+    Navigate to **Settings > Discord Integration**
+  </Step>
+  
+  <Step title="Toggle the setting">
+    Enable "Discord Rich Presence"
+  </Step>
+  
+  <Step title="Launch Discord">
+    Ensure Discord is running (desktop app or browser)
+  </Step>
+  
+  <Step title="Verify the status">
+    Your Discord profile should show your BMM activity
+  </Step>
+</Steps>
+
+<Info>
+  **Default**: Enabled
+</Info>
+
+## How It Works
+
+BMM uses the `discord-rich-presence` library to communicate with the Discord client:
+
+### Connection Process
+
+1. **Background thread** - Discord RPC runs in a dedicated background thread
+2. **Auto-connect** - Attempts to connect to Discord on BMM startup
+3. **Heartbeat** - Updates activity status every 5 seconds
+4. **Auto-reconnect** - Automatically reconnects if Discord restarts
+
+### Activity Information
+
+When connected, your Discord profile displays:
+
+- **State**: "Managing Balatro mods"
+- **Details**: "Using Balatro Mod Manager"
+- **Large Image**: BMM icon
+- **Large Image Text**: "Balatro Mod Manager"
+
+<Note>
+  The activity information is static and does not reveal which specific mods you're working with.
+</Note>
+
+## Connection Behavior
+
+### Automatic Retry
+
+If Discord is not running when BMM starts:
+- Connection attempts are retried every 15 seconds
+- No errors are shown to the user (graceful failure)
+- Connects automatically when Discord launches
+
+### Graceful Disconnection
+
+If Discord closes while BMM is running:
+- The connection is automatically cleaned up
+- BMM continues to retry connection attempts
+- Reconnects when Discord restarts
+
+### Disable and Disconnect
+
+When you disable Discord RPC in settings:
+- The active connection is immediately closed
+- Activity status is cleared from your Discord profile
+- The background thread stops attempting connections
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Activity not showing in Discord">
+    **Possible causes**:
+    - Discord is not running
+    - Discord RPC is disabled in BMM settings
+    - Discord privacy settings block Rich Presence
+    - Discord application ID is not recognized
+
+    **Solutions**:
+    1. Ensure Discord (desktop app) is running
+    2. Check **Settings > Discord Integration** is enabled
+    3. Verify Discord privacy settings allow activity status
+    4. Restart both BMM and Discord
+    5. Check BMM logs for connection errors
+  </Accordion>
+
+  <Accordion title="Discord not detected">
+    **Platform-specific issues**:
+    
+    **Windows**:
+    - Discord must be the desktop app (browser version doesn't support RPC)
+    - Check if Discord is running in the system tray
+    
+    **macOS**:
+    - Ensure Discord is in `/Applications/` or `~/Applications/`
+    - Grant necessary permissions if prompted
+    
+    **Linux**:
+    - Discord must be running (desktop app or Flatpak)
+    - Check if `discord-rpc` socket is accessible
+    - Flatpak Discord may require additional permissions
+
+    **Solutions**:
+    - Use the official Discord desktop app
+    - Check firewall/security software isn't blocking IPC
+    - Restart Discord and BMM
+  </Accordion>
+
+  <Accordion title="Activity shows old information">
+    If the activity is stale or shows outdated information:
+    - The connection may have failed to update
+    - Discord cache might be outdated
+
+    **Solutions**:
+    1. Disable and re-enable Discord RPC in BMM settings
+    2. Restart BMM
+    3. Restart Discord
+    4. Clear Discord cache (Settings > Advanced > Clear Cache)
+  </Accordion>
+
+  <Accordion title="Connection spam in logs">
+    If BMM logs show repeated connection attempts:
+    - This is normal behavior when Discord is not running
+    - Attempts are rate-limited to every 15 seconds
+    - No performance impact
+
+    **To reduce log spam**: Disable Discord RPC if you don't use it
+  </Accordion>
+
+  <Accordion title="Privacy concerns">
+    If you're concerned about privacy:
+    - Discord RPC only shows that you're using BMM
+    - No mod names, files, or personal information is shared
+    - You can disable it entirely in settings
+
+    **To disable**: Settings > Discord Integration > Toggle off
+  </Accordion>
+</AccordionGroup>
+
+## Privacy and Security
+
+### What Information is Shared?
+
+Discord RPC shares only:
+- Application name ("Balatro Mod Manager")
+- Generic activity text ("Managing Balatro mods")
+- BMM icon image
+- Elapsed time (how long BMM has been running)
+
+### What is NOT Shared?
+
+- Mod names or which mods you have installed
+- File paths or system information
+- Your Balatro installation directory
+- Mod download history
+- Personal identifiers
+
+<Info>
+  Discord RPC uses the official Discord IPC protocol and does not send data to any third-party servers.
+</Info>
+
+## Discord Application ID
+
+BMM uses the Discord application ID: `1344296383145967669`
+
+This ID is hardcoded in the source and corresponds to the official BMM Discord application registration.
+
+<Note>
+  This ID is public and visible in the source code. It cannot be used to impersonate or access your Discord account.
+</Note>
+
+## Disabling Discord RPC
+
+To completely disable Discord Rich Presence:
+
+<Steps>
+  <Step title="Open settings">
+    Navigate to **Settings > Discord Integration**
+  </Step>
+  
+  <Step title="Disable the feature">
+    Toggle "Discord Rich Presence" off
+  </Step>
+  
+  <Step title="Confirm disconnection">
+    Your activity status is immediately cleared from Discord
+  </Step>
+</Steps>
+
+When disabled:
+- No connection attempts are made
+- No activity is displayed in Discord
+- The background thread remains idle
+- Can be re-enabled at any time
+
+## Alternative: Discord Privacy Settings
+
+You can also control Rich Presence visibility in Discord itself:
+
+1. Open **Discord Settings > Activity Privacy**
+2. Toggle "Display current activity as a status message" off
+3. This disables Rich Presence for ALL applications, not just BMM
+
+<Tip>
+  If you want to hide your activity for all apps, use Discord's privacy settings. If you only want to hide BMM, disable it in BMM settings.
+</Tip>
+
+## Background Thread Details
+
+For technical users:
+
+### Thread Behavior
+
+- **Spawned on BMM startup** - A single background thread is created
+- **Event loop** - Runs continuously with a 5-second sleep interval
+- **Graceful shutdown** - Thread terminates when BMM closes
+- **Low overhead** - Minimal CPU and memory usage
+
+### Connection Retry Logic
+
+```
+if enabled:
+    if not connected:
+        if last_attempt > 15s ago:
+            attempt connection
+    else:
+        update activity every 5s
+else:
+    close connection if exists
+```
+
+### Error Handling
+
+- Connection errors are logged but not displayed to users
+- Failed activity updates trigger a reconnection
+- Broken connections are automatically cleaned up
+- No fatal errors - failures are gracefully ignored
+
+<Note>
+  The Discord RPC thread uses Rust's `Arc<Mutex<>>` for thread-safe access to the client state.
+</Note>
+
+## Customizing Activity (Advanced)
+
+Currently, BMM does not support customizing the activity message. However, the `update_activity()` method in `discord_rpc.rs` accepts custom state and details:
+
+```rust
+pub fn update_activity(&self, state: &str, details: &str)
+```
+
+If you're building on top of BMM or forking it, you can modify the activity text by calling this method with custom strings.
+
+<Warning>
+  Modifying the source code requires rebuilding BMM from source. This is intended for advanced users and developers only.
+</Warning>
+
+## Related Topics
+
+- [Settings](/guide/settings) - Other BMM configuration options

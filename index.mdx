@@ -1,97 +1,120 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Balatro Mod Manager"
+description: "The easiest way to find, download, and install mods for Balatro"
 ---
 
-## Setting up
+<div className="mb-8">
+  <img 
+    src="https://media.brand.dev/a7eb4185-d9fc-42ca-8f6d-7e634c3b0de7.svg" 
+    alt="Balatro Mod Manager" 
+    className="h-24 mb-4"
+  />
+</div>
 
-Get your documentation site up and running in minutes.
+## Welcome to Balatro Mod Manager
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Balatro Mod Manager is a standalone desktop application that makes modding Balatro simple and accessible. Browse hundreds of mods, install them with one click, and manage your entire mod collection from a beautiful, intuitive interface.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running in 5 minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Installation" icon="download" href="/installation">
+    Download for Windows, macOS, or Linux
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Browse Mods" icon="grid" href="/guide/browsing-mods">
+    Explore the mod catalog
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Backups" icon="floppy-disk" href="/guide/backups">
+    Save and restore your mod setup
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Key Features
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="One-Click Installation" icon="mouse-pointer">
+    Install mods with a single click. Dependencies are automatically resolved and installed.
+  </Card>
+  <Card title="Mod Collections" icon="layer-group">
+    Curated mod packs for different playstyles and difficulty levels.
+  </Card>
+  <Card title="Automatic Updates" icon="arrows-rotate">
+    Keep your mods up to date with built-in update checking.
+  </Card>
+  <Card title="Backup & Restore" icon="clock-rotate-left">
+    Save your mod configurations and restore them anytime.
+  </Card>
+  <Card title="Local Mod Import" icon="file-import">
+    Import and manage mods from files on your computer.
+  </Card>
+  <Card title="Discord Integration" icon="discord">
+    Show what you're playing with Discord Rich Presence.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Cross-Platform Support
 
-## Need inspiration?
+Balatro Mod Manager works seamlessly on all major platforms:
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<CardGroup cols={3}>
+  <Card title="Windows" icon="windows" href="/platform/windows">
+    Full support for Windows 10 and 11
+  </Card>
+  <Card title="macOS" icon="apple" href="/platform/macos">
+    Universal binary for Intel and Apple Silicon
+  </Card>
+  <Card title="Linux" icon="linux" href="/platform/linux">
+    Flatpak, AppImage, and native packages
+  </Card>
+</CardGroup>
+
+<Note>
+  **Steam Deck Ready**: Balatro Mod Manager is fully compatible with Steam Deck. See the [Steam Deck guide](/platform/steam-deck) for installation instructions.
+</Note>
+
+## Popular Guides
+
+<CardGroup cols={2}>
+  <Card title="Installing Your First Mod" icon="sparkles" href="/first-mod">
+    Step-by-step guide to installing your first mod
+  </Card>
+  <Card title="Managing Mods" icon="sliders" href="/guide/managing-mods">
+    Enable, disable, and organize your mods
+  </Card>
+  <Card title="Lovely Injector" icon="plug" href="/guide/lovely-injector">
+    Understanding the Lovely mod loader
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting/common-issues">
+    Fix common issues and errors
+  </Card>
+</CardGroup>
+
+## For Developers
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/dev/architecture">
+    Learn about the technical architecture
+  </Card>
+  <Card title="Building from Source" icon="code" href="/dev/building">
+    Build the application yourself
+  </Card>
+  <Card title="Contributing" icon="code-pull-request" href="/dev/contributing">
+    Contribute to the project
+  </Card>
+  <Card title="API Reference" icon="terminal" href="/api/database">
+    Explore the Rust API
+  </Card>
+</CardGroup>
+
+## Community & Support
+
+Need help or want to contribute? Join our community:
+
+- **GitHub**: [skyline69/balatro-mod-manager](https://github.com/skyline69/balatro-mod-manager)
+- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/skyline69/balatro-mod-manager/issues)
+- **Discussions**: Ask questions and share tips on [GitHub Discussions](https://github.com/skyline69/balatro-mod-manager/discussions)
+
+<Warning>
+  **Note**: Balatro Mod Manager is **NOT** compatible with the Xbox Game Pass version of Balatro. Only the Steam and standalone versions are supported.
+</Warning>

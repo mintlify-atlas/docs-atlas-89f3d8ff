@@ -1,0 +1,633 @@
+---
+title: Contributing Guide
+description: How to contribute to Balatro Mod Manager development
+---
+
+## Getting Started
+
+Thank you for your interest in contributing to Balatro Mod Manager! This guide will help you understand the project structure, coding standards, and contribution workflow.
+
+<Info>
+  Before contributing, please read through the [Architecture Overview](/dev/architecture) and [Building from Source](/dev/building) pages.
+</Info>
+
+## Ways to Contribute
+
+<CardGroup cols={2}>
+  <Card title="Code Contributions" icon="code">
+    - Bug fixes
+    - New features
+    - Performance improvements
+    - Refactoring
+  </Card>
+  <Card title="Mod Index" icon="puzzle-piece">
+    - Adding new mods to the catalog
+    - Updating mod metadata
+    - See [Balatro Mod Index](https://github.com/skyline69/balatro-mod-index)
+  </Card>
+  <Card title="Documentation" icon="book">
+    - Improving existing docs
+    - Adding examples
+    - Fixing typos
+  </Card>
+  <Card title="Testing" icon="vial">
+    - Testing on different platforms
+    - Reporting bugs
+    - Suggesting improvements
+  </Card>
+</CardGroup>
+
+## Project Structure
+
+Understanding the repository layout:
+
+```
+balatro-mod-manager/
+├── src/                      # SvelteKit UI
+│   ├── components/           # Svelte components
+│   ├── routes/              # SvelteKit routes (+page.svelte)
+│   ├── stores/              # Svelte stores (state management)
+│   └── utils/               # Frontend utilities
+├── src-tauri/               # Tauri app and Rust backend
+│   ├── src/
+│   │   ├── lib.rs          # Main app entry + command registration
+│   │   └── commands/       # Tauri command modules
+│   ├── bmm-lib/            # Core Rust library
+│   │   └── src/            # Business logic modules
+│   ├── Cargo.toml          # Rust dependencies
+│   └── tauri.conf.json     # Tauri configuration
+├── static/                  # Static assets
+├── images/                  # Image assets
+├── scripts/                 # Build/install scripts
+├── .github/                 # CI workflows
+├── tests/                   # Shared test helpers
+├── packaging/              # Platform-specific packaging
+├── Taskfile.yml            # Task runner configuration
+├── package.json            # Frontend dependencies
+└── Cargo.toml              # Workspace configuration
+```
+
+## Coding Standards
+
+### Frontend (Svelte/TypeScript)
+
+<Steps>
+  <Step title="Code Style">
+    - **Indentation**: 2 spaces
+    - **Components**: `PascalCase.svelte` (e.g., `ModCard.svelte`)
+    - **Stores/Utils**: `camelCase.ts` (e.g., `modStore.ts`)
+    - **Routing**: Follow SvelteKit patterns (`+page.svelte`, `+layout.svelte`)
+  </Step>
+  <Step title="Formatting">
+    Use Prettier for consistent formatting:
+    
+    ```bash
+    bun run format
+    ```
+  </Step>
+  <Step title="Type Checking">
+    Ensure TypeScript types are correct:
+    
+    ```bash
+    bun run check
+    ```
+  </Step>
+  <Step title="Linting">
+    Run oxlint before committing:
+    
+    ```bash
+    bun run lint
+    bun run lint:fix  # Auto-fix issues
+    ```
+  </Step>
+</Steps>
+
+### Backend (Rust)
+
+<Steps>
+  <Step title="Naming Conventions">
+    - **Modules/Functions**: `snake_case` (e.g., `install_mod`)
+    - **Types/Structs**: `CamelCase` (e.g., `ModMetadata`)
+    - **Constants**: `SCREAMING_SNAKE_CASE` (e.g., `MAX_RETRIES`)
+  </Step>
+  <Step title="Error Handling">
+    Prefer `Result<T, E>` over panics:
+    
+    ```rust
+    // Good
+    fn install_mod(id: &str) -> Result<(), InstallError> {
+        // ...
+    }
+    
+    // Avoid
+    fn install_mod(id: &str) {
+        // ... .unwrap() or panic!
+    }
+    ```
+  </Step>
+  <Step title="Formatting">
+    Use `cargo fmt` for consistent formatting:
+    
+    ```bash
+    task fmt-rust
+    # or
+    cargo fmt --all
+    ```
+  </Step>
+  <Step title="Linting">
+    Run Clippy and fix warnings:
+    
+    ```bash
+    cargo clippy -- -D warnings
+    ```
+  </Step>
+</Steps>
+
+### Import Organization
+
+<CodeGroup>
+```typescript TypeScript
+// 1. External imports
+import { writable } from 'svelte/store';
+import { invoke } from '@tauri-apps/api/core';
+
+// 2. Internal imports
+import { modStore } from './modStore';
+import type { Mod } from '../types';
+
+// 3. Relative imports
+import ModCard from '../components/ModCard.svelte';
+```
+
+```rust Rust
+// 1. std imports
+use std::path::PathBuf;
+use std::fs;
+
+// 2. External crate imports
+use serde::{Deserialize, Serialize};
+use tauri::State;
+
+// 3. Crate imports
+use crate::database::Database;
+use crate::errors::InstallError;
+
+// 4. Local module imports
+use super::helpers;
+```
+</CodeGroup>
+
+## Testing Guidelines
+
+### Backend Testing
+
+<Warning>
+  **Critical**: Rust tests must run with `--test-threads=1` to avoid SQLite database lock conflicts.
+</Warning>
+
+<Steps>
+  <Step title="Test Location">
+    - Unit tests live beside code in `#[cfg(test)]` modules
+    - Integration tests in `tests/` directory per crate
+    - Use `rstest` for parameterized tests when helpful
+  </Step>
+  <Step title="Test Naming">
+    Use descriptive `snake_case` names:
+    
+    ```rust
+    #[test]
+    fn test_install_mod_creates_directory() {
+        // ...
+    }
+    
+    #[test]
+    fn test_install_mod_handles_missing_file() {
+        // ...
+    }
+    ```
+  </Step>
+  <Step title="Focus Areas">
+    - Core business logic
+    - File I/O operations
+    - Database interactions
+    - Error handling paths
+  </Step>
+  <Step title="Running Tests">
+    ```bash
+    # Run all tests
+    task test
+    
+    # Test specific crate
+    cd src-tauri && cargo test -q -- --test-threads=1
+    cd src-tauri/bmm-lib && cargo test -q -- --test-threads=1
+    ```
+  </Step>
+</Steps>
+
+### Frontend Testing
+
+<Info>
+  Frontend uses Vitest with Testing Library for component tests.
+</Info>
+
+```bash
+# Run tests
+bun run test
+
+# Watch mode
+bun run test:watch
+
+# Coverage report
+bun run test:coverage
+```
+
+**Note**: While formal unit tests are limited, always run `bun run check` for type checking before submitting PRs.
+
+## Commit Guidelines
+
+### Commit Message Format
+
+Use imperative mood with optional conventional commit prefixes:
+
+<CodeGroup>
+```text Good Examples
+feat: add Discord Rich Presence integration
+fix: resolve database lock on mod uninstall
+chore: update dependencies to latest versions
+refactor: simplify mod installation logic
+docs: improve building instructions for Linux
+test: add tests for mod detection module
+```
+
+```text Avoid
+Added Discord integration  # Past tense
+Fixed bug  # Not descriptive
+Update  # Too vague
+```
+</CodeGroup>
+
+### Conventional Commit Prefixes
+
+| Prefix | Use Case |
+|--------|----------|
+| `feat:` | New features |
+| `fix:` | Bug fixes |
+| `docs:` | Documentation changes |
+| `chore:` | Maintenance tasks |
+| `refactor:` | Code restructuring |
+| `test:` | Adding or updating tests |
+| `perf:` | Performance improvements |
+| `style:` | Code style changes (formatting) |
+| `ci:` | CI/CD changes |
+
+### Commit Best Practices
+
+<Steps>
+  <Step title="Keep Commits Focused">
+    Each commit should address a single concern. Avoid mixing unrelated changes.
+  </Step>
+  <Step title="Write Clear Messages">
+    - First line: concise summary (50-72 characters)
+    - Blank line
+    - Detailed explanation if needed
+  </Step>
+  <Step title="Reference Issues">
+    Link to relevant issues:
+    
+    ```text
+    fix: resolve Steam path detection on Windows
+    
+    Fixes #123
+    ```
+  </Step>
+</Steps>
+
+## Pull Request Process
+
+### Before Submitting
+
+<Steps>
+  <Step title="Run All Checks">
+    ```bash
+    task check
+    ```
+    
+    This runs type checking, linting, formatting checks, and tests.
+  </Step>
+  <Step title="Format Code">
+    ```bash
+    task fmt
+    ```
+  </Step>
+  <Step title="Test on Your Platform">
+    Build and test the application:
+    
+    ```bash
+    task debug
+    # Test your changes thoroughly
+    ```
+  </Step>
+  <Step title="Update Documentation">
+    If your changes affect user-facing behavior, update:
+    - README.md
+    - In-app help text
+    - Documentation pages
+  </Step>
+</Steps>
+
+### Pull Request Template
+
+Include the following in your PR description:
+
+```markdown
+## Description
+Brief description of changes
+
+## Changes Made
+- Change 1
+- Change 2
+- Change 3
+
+## Testing
+- [ ] Tested on Windows
+- [ ] Tested on macOS
+- [ ] Tested on Linux
+- [ ] Added/updated tests
+
+## Related Issues
+Fixes #123
+Related to #456
+
+## Screenshots/GIFs
+(If UI changes)
+
+## Checklist
+- [ ] Code follows project style guidelines
+- [ ] All tests pass
+- [ ] Documentation updated
+- [ ] Commit messages follow conventions
+```
+
+### PR Requirements
+
+<CardGroup cols={2}>
+  <Card title="Code Quality" icon="check">
+    - All checks passing (CI)
+    - No linting errors
+    - Tests included for new features
+    - Code formatted correctly
+  </Card>
+  <Card title="Documentation" icon="book">
+    - Clear PR description
+    - Linked issues
+    - Test steps provided
+    - Screenshots for UI changes
+  </Card>
+</CardGroup>
+
+### Platform Testing
+
+<Info>
+  **Minimum requirement**: Test on at least one platform (preferably the one you developed on).
+  
+  **Ideal**: Test on Windows and macOS, or request testing from maintainers.
+</Info>
+
+### Review Process
+
+<Steps>
+  <Step title="Automated Checks">
+    CI runs tests, linting, and builds on all platforms.
+  </Step>
+  <Step title="Code Review">
+    Maintainers review code for:
+    - Correctness
+    - Code quality
+    - Performance
+    - Security
+  </Step>
+  <Step title="Feedback & Iteration">
+    Address review comments and push updates.
+  </Step>
+  <Step title="Merge">
+    Once approved, maintainers will merge your PR.
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### Setting Up Your Environment
+
+<Steps>
+  <Step title="Fork & Clone">
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/balatro-mod-manager.git
+    cd balatro-mod-manager
+    ```
+  </Step>
+  <Step title="Install Dependencies">
+    ```bash
+    task bootstrap
+    ```
+  </Step>
+  <Step title="Create Branch">
+    ```bash
+    git checkout -b feature/your-feature-name
+    # or
+    git checkout -b fix/issue-description
+    ```
+  </Step>
+  <Step title="Make Changes">
+    Edit code, add tests, update documentation.
+  </Step>
+  <Step title="Test Locally">
+    ```bash
+    task debug
+    task check
+    ```
+  </Step>
+  <Step title="Commit Changes">
+    ```bash
+    git add .
+    git commit -m "feat: add your feature description"
+    ```
+  </Step>
+  <Step title="Push & Create PR">
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+    
+    Then create a PR on GitHub.
+  </Step>
+</Steps>
+
+### Working with the Codebase
+
+#### Adding a New Tauri Command
+
+<Steps>
+  <Step title="Create Command Function">
+    Add to appropriate file in `src-tauri/src/commands/`:
+    
+    ```rust
+    // src-tauri/src/commands/mods.rs
+    #[tauri::command]
+    pub async fn get_mod_details(mod_id: String) -> Result<ModDetails, String> {
+        // Implementation
+        Ok(ModDetails { /* ... */ })
+    }
+    ```
+  </Step>
+  <Step title="Register Command">
+    Update `src-tauri/src/lib.rs`:
+    
+    ```rust
+    .invoke_handler(tauri::generate_handler![
+        // ... existing commands
+        commands::mods::get_mod_details,
+    ])
+    ```
+  </Step>
+  <Step title="Call from Frontend">
+    ```typescript
+    import { invoke } from '@tauri-apps/api/core';
+    
+    const details = await invoke<ModDetails>('get_mod_details', {
+      modId: 'example-mod'
+    });
+    ```
+  </Step>
+</Steps>
+
+#### Modifying Database Schema
+
+<Steps>
+  <Step title="Update Schema">
+    Edit `src-tauri/bmm-lib/src/database.rs`:
+    
+    ```rust
+    // Add new column or table
+    conn.execute(
+        "ALTER TABLE mods ADD COLUMN new_field TEXT",
+        [],
+    )?;
+    ```
+  </Step>
+  <Step title="Add Migration">
+    Include migration logic in `Database::new()` with version check.
+  </Step>
+  <Step title="Test Migration">
+    ```bash
+    cd src-tauri/bmm-lib
+    cargo test -q -- --test-threads=1
+    ```
+  </Step>
+</Steps>
+
+#### Creating a New Frontend Store
+
+<Steps>
+  <Step title="Create Store File">
+    ```typescript
+    // src/stores/myStore.ts
+    import { writable } from 'svelte/store';
+    
+    interface MyState {
+      data: string[];
+      loading: boolean;
+    }
+    
+    export const myStore = writable<MyState>({
+      data: [],
+      loading: false
+    });
+    ```
+  </Step>
+  <Step title="Add Persistence (Optional)">
+    Use localStorage pattern from `modStore.ts` if state should persist.
+  </Step>
+  <Step title="Use in Components">
+    ```svelte
+    <script lang="ts">
+      import { myStore } from '../stores/myStore';
+    </script>
+    
+    {#if $myStore.loading}
+      <p>Loading...</p>
+    {:else}
+      <ul>
+        {#each $myStore.data as item}
+          <li>{item}</li>
+        {/each}
+      </ul>
+    {/if}
+    ```
+  </Step>
+</Steps>
+
+## Security & Configuration
+
+<Warning>
+  **Never commit**:
+  - Secrets or API keys
+  - Code signing identities
+  - Personal credentials
+  - `.env` files with sensitive data
+</Warning>
+
+### Secure Practices
+
+- macOS signing is configured in `Taskfile.yml` for local use only
+- Production signing uses SignPath (managed by maintainers)
+- Secrets should be in `.gitignore`
+- Use environment variables for sensitive configuration
+
+## Adding Mods to the Catalog
+
+<Info>
+  To add mods to Balatro Mod Manager's catalog, contribute to the separate [Balatro Mod Index](https://github.com/skyline69/balatro-mod-index) repository.
+</Info>
+
+The mod index repository contains:
+- Mod metadata (name, description, author)
+- Download URLs
+- Version information
+- Compatibility data
+
+Follow the README in that repository for contribution guidelines.
+
+## Getting Help
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github">
+    For bug reports and feature requests:
+    [github.com/skyline69/balatro-mod-manager/issues](https://github.com/skyline69/balatro-mod-manager/issues)
+  </Card>
+  <Card title="Discussions" icon="comments">
+    For questions and community support:
+    [GitHub Discussions](https://github.com/skyline69/balatro-mod-manager/discussions)
+  </Card>
+</CardGroup>
+
+## Code Review Checklist
+
+Before requesting review, ensure:
+
+- [ ] Code follows project style guidelines (Rust: `snake_case`, TS: `camelCase`)
+- [ ] All automated checks pass (`task check`)
+- [ ] Code is formatted (`task fmt`)
+- [ ] Tests are included and pass (`task test`)
+- [ ] Commit messages follow conventions
+- [ ] PR description is complete with context
+- [ ] Documentation is updated if needed
+- [ ] Changes tested on at least one platform
+- [ ] No secrets or credentials committed
+- [ ] Imports are organized correctly
+
+## License
+
+By contributing to Balatro Mod Manager, you agree that your contributions will be licensed under the GPL-3.0 license.
+
+## Thank You!
+
+Contributions of all sizes are appreciated. Whether you're fixing a typo, adding a feature, or improving documentation, you're helping make Balatro Mod Manager better for everyone.

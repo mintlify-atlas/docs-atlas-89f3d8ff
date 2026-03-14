@@ -1,0 +1,664 @@
+---
+title: 'Mod Collections'
+description: 'Create and share curated sets of mods with collections'
+icon: 'layer-group'
+---
+
+## Overview
+
+Mod collections allow you to group related mods together and enable/disable them as a set. Create collections for different playstyles, share your favorite mod sets with friends, or switch between curated experiences with a single click.
+
+## What Are Collections?
+
+A collection is a named group of mods that can be:
+
+<CardGroup cols={2}>
+  <Card title="Activated Together" icon="toggle-on">
+    Enable all mods in a collection with one click
+  </Card>
+  <Card title="Shared" icon="share-nodes">
+    Export collections as codes to share with others
+  </Card>
+  <Card title="Stacked" icon="layer-group">
+    Have multiple collections active simultaneously
+  </Card>
+  <Card title="Organized" icon="folder-tree">
+    Keep your mod library organized by theme or purpose
+  </Card>
+</CardGroup>
+
+## Collection Data Structure
+
+From `collections.ts:3-10`, each collection contains:
+
+```typescript
+export type ModCollection = {
+  id: string;              // Unique identifier (UUID)
+  name: string;            // User-friendly name
+  modTitles: string[];     // List of mod names
+  modIds: string[];        // List of mod IDs (for catalog mods)
+  createdAt: number;       // Timestamp of creation
+  updatedAt: number;       // Timestamp of last modification
+};
+```
+
+<Info>
+  Collections store both mod titles and IDs for robust matching. This handles cases where mod names have slight variations.
+</Info>
+
+## Creating Collections
+
+There are multiple ways to create collections:
+
+### From a Single Mod
+
+<Steps>
+  <Step title="Open Mod View">
+    Click on any mod in the catalog or installed mods list.
+  </Step>
+  <Step title="Collections Button">
+    Click the layers icon button to open the collection picker.
+  </Step>
+  <Step title="Create New">
+    Enter a name for your new collection and click "Create".
+  </Step>
+  <Step title="Mod Added">
+    The selected mod is automatically added to the new collection.
+  </Step>
+</Steps>
+
+### From Active Mods
+
+Create a collection from your currently enabled mods:
+
+```typescript
+// From collections.ts:197-239
+export function createCollectionFromActive(
+  name: string,
+  modTitles: string[],
+  modIds: string[],
+): {
+  ok: boolean;
+  id?: string;
+  error?: string;
+} {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { ok: false, error: "Collection name can't be empty." };
+  }
+  if (modTitles.length === 0) {
+    return { ok: false, error: "No active mods to add to collection." };
+  }
+  let newId = "";
+  collectionsStore.update((list) => {
+    const exists = list.some(
+      (c) => normalizeName(c.name) === normalizeName(trimmed),
+    );
+    if (exists) {
+      return list;
+    }
+    newId = generateId();
+    const now = Date.now();
+    return [
+      ...list,
+      {
+        id: newId,
+        name: trimmed,
+        modTitles: [...modTitles],
+        modIds: [...modIds],
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+  });
+  if (!newId) {
+    return { ok: false, error: "A collection with that name already exists." };
+  }
+  return { ok: true, id: newId };
+}
+```
+
+<Tip>
+  This is useful for saving your current mod setup before trying a different collection or mod set.
+</Tip>
+
+## Managing Collection Contents
+
+### Adding Mods to Collections
+
+<Steps>
+  <Step title="Open Collection Picker">
+    Click the layers icon on any mod card or detail view.
+  </Step>
+  <Step title="Select Collection">
+    Click on a collection name to toggle the mod in that collection.
+  </Step>
+  <Step title="Dependency Check">
+    If the mod has dependencies, you'll be prompted to add them to the collection.
+  </Step>
+  <Step title="Auto-Install">
+    If the mod isn't installed, it's automatically downloaded and installed.
+  </Step>
+</Steps>
+
+From `CollectionPicker.svelte:175-225`, the toggle logic:
+
+```typescript
+async function handleToggle(id: string) {
+  const modTitle = $collectionPickerStore.modTitle;
+  const modId = $collectionPickerStore.modId;
+  if (!modTitle) return;
+  const collection = $collectionsStore.find((c) => c.id === id);
+  if (!collection) return;
+  const isMember = hasCollectionMod(collection, modTitle, modId);
+
+  // If already a member, just remove it
+  if (isMember) {
+    setModInCollection(id, modTitle, false, modId);
+    return;
+  }
+
+  // Check if mod has missing dependencies BEFORE adding
+  const mod = get(modsStore).find((m) => m.title === modTitle);
+  if (mod) {
+    const required: string[] = [];
+    if (mod.requires_steamodded) required.push("Steamodded");
+    if (mod.requires_talisman) required.push("Talisman");
+
+    if (required.length > 0) {
+      // Check which dependencies are actually missing
+      const missingDeps: string[] = [];
+      for (const dep of required) {
+        const isInstalled = await invoke<boolean>("check_mod_installation", {
+          modType: dep,
+        });
+        if (!isInstalled) {
+          missingDeps.push(dep);
+        }
+      }
+
+      if (missingDeps.length > 0) {
+        // Show dependency prompt
+        openDepPrompt({
+          collectionId: id,
+          collectionName: collection.name,
+          modTitle,
+          modId,
+          missing: missingDeps,
+          isPreAddCheck: true,
+        });
+        return;
+      }
+    }
+  }
+
+  // No missing dependencies, proceed with adding
+  await addModToCollection(id, modTitle, modId, mod);
+}
+```
+
+<Warning>
+  When adding a mod with dependencies to a collection, make sure to add the dependencies too. The app will prompt you, but you need to confirm.
+</Warning>
+
+### Removing Mods from Collections
+
+Simply click the checkmark on a mod in the collection picker to remove it:
+
+```typescript
+// From collections.ts:273-312
+export function toggleModInCollection(
+  id: string,
+  modTitle: string,
+  modId?: string | null,
+) {
+  collectionsStore.update((list) =>
+    list.map((c) => {
+      if (c.id !== id) return c;
+      const idValue = modId ?? "";
+      // Use normalized matching to find existing entry
+      const existingTitle = findMatchingTitle(c.modTitles, modTitle);
+      const existingId = idValue
+        ? c.modIds.find((i) => normalizeName(i) === normalizeName(idValue))
+        : null;
+      // Check if mod exists by either title OR id match
+      const has = existingTitle !== null || existingId !== null;
+      const nextTitles = has
+        ? existingTitle
+          ? c.modTitles.filter((t) => t !== existingTitle)
+          : c.modTitles
+        : [...c.modTitles, modTitle];
+      const nextIds = idValue
+        ? has
+          ? existingId
+            ? c.modIds.filter((t) => t !== existingId)
+            : c.modIds
+          : c.modIds.includes(idValue)
+            ? c.modIds
+            : [...c.modIds, idValue]
+        : c.modIds;
+      return {
+        ...c,
+        modTitles: nextTitles,
+        modIds: nextIds,
+        updatedAt: Date.now(),
+      };
+    }),
+  );
+}
+```
+
+## Activating Collections
+
+Collections can be activated to enable their mods:
+
+### Single Collection Activation
+
+<Steps>
+  <Step title="Open Collections">
+    View the collections panel in the Installed Mods view.
+  </Step>
+  <Step title="Click Activate">
+    Click the activate button on a collection.
+  </Step>
+  <Step title="State Snapshot">
+    The app saves your current mod states before making changes.
+  </Step>
+  <Step title="Mods Enabled">
+    All mods in the collection are enabled; other mods are disabled.
+  </Step>
+</Steps>
+
+### Multiple Active Collections
+
+You can have multiple collections active simultaneously:
+
+```typescript
+// From collections.ts:377-380
+export function addActiveCollection(id: string) {
+  activeCollectionIds.update((ids) => (ids.includes(id) ? ids : [...ids, id]));
+}
+```
+
+When multiple collections are active:
+- Mods in ANY active collection remain enabled
+- Mods not in any active collection are disabled
+- Deactivating a collection only disables mods not in other active collections
+
+### Pre-Collection Snapshot
+
+The app preserves your mod states before activating the first collection:
+
+```typescript
+// From collections.ts:407-425
+export function hasPreCollectionSnapshot(): boolean {
+  return get(preCollectionSnapshot) !== null;
+}
+
+export function savePreCollectionSnapshot(
+  enabledMap: Record<string, boolean>,
+): void {
+  preCollectionSnapshot.set({ ...enabledMap });
+}
+
+export function popPreCollectionSnapshot(): Record<string, boolean> | null {
+  const snapshot = get(preCollectionSnapshot);
+  preCollectionSnapshot.set(null);
+  return snapshot;
+}
+```
+
+<Info>
+  When you deactivate all collections, the app restores your original mod states from the snapshot. This lets you safely experiment with collections.
+</Info>
+
+## Sharing Collections
+
+Collections can be exported and shared with other users:
+
+### Export Process
+
+<Steps>
+  <Step title="Select Collection">
+    Choose the collection you want to share.
+  </Step>
+  <Step title="Export Code">
+    Click the export button to generate a shareable code.
+  </Step>
+  <Step title="Copy Code">
+    The code is copied to your clipboard automatically.
+  </Step>
+  <Step title="Share">
+    Send the code to friends via Discord, forums, or social media.
+  </Step>
+</Steps>
+
+### Export Implementation
+
+From `collections.ts:432-448`, the export logic:
+
+```typescript
+export function exportCollectionCode(id: string): {
+  ok: boolean;
+  code?: string;
+  error?: string;
+} {
+  const collection = get(collectionsStore).find((c) => c.id === id) ?? null;
+  if (!collection) {
+    return { ok: false, error: "Collection not found." };
+  }
+  const payload = {
+    v: 1,                          // Version for future compatibility
+    name: collection.name,
+    modIds: collection.modIds,
+    modTitles: collection.modTitles,
+  };
+  return { ok: true, code: encodeSharePayload(payload) };
+}
+```
+
+The payload is:
+1. Serialized to JSON
+2. Encoded to Base64
+3. Prefixed with `BMMCOLL1:` for identification
+
+<Tip>
+  Collection codes are portable and work across different operating systems. Share your favorite mod sets with anyone!
+</Tip>
+
+### Import Process
+
+<Steps>
+  <Step title="Open Import">
+    Click the import button in the collections panel.
+  </Step>
+  <Step title="Paste Code">
+    Paste the collection code you received.
+  </Step>
+  <Step title="Unique Name">
+    If a collection with the same name exists, a unique name is generated (e.g., "Collection (2)").
+  </Step>
+  <Step title="Collection Created">
+    The imported collection appears in your collections list.
+  </Step>
+</Steps>
+
+From `collections.ts:450-504`, the import logic:
+
+```typescript
+export function importCollectionCode(code: string): {
+  ok: boolean;
+  id?: string;
+  error?: string;
+} {
+  if (!code.trim()) {
+    return { ok: false, error: "Paste a collection code first." };
+  }
+  let payload: { name?: unknown; modTitles?: unknown; modIds?: unknown };
+  try {
+    payload = decodeSharePayload(code) as typeof payload;
+  } catch {
+    return { ok: false, error: "Invalid collection code." };
+  }
+  const name =
+    typeof payload?.name === "string" && payload.name.trim()
+      ? payload.name.trim()
+      : "Imported Collection";
+  const modTitles = Array.isArray(payload?.modTitles)
+    ? (payload.modTitles as unknown[])
+        .filter((t): t is string => typeof t === "string")
+        .map((t) => t.trim())
+    : [];
+  const modIds = Array.isArray(payload?.modIds)
+    ? (payload.modIds as unknown[])
+        .filter((t): t is string => typeof t === "string")
+        .map((t) => t.trim())
+    : [];
+  const deduped: string[] = Array.from(new Set(modTitles.filter(Boolean)));
+  const dedupedIds: string[] = Array.from(new Set(modIds.filter(Boolean)));
+
+  let newId = "";
+  collectionsStore.update((list) => {
+    const existing = new Set(list.map((c) => normalizeName(c.name)));
+    const uniqueName = makeUniqueName(name, existing);
+    newId = generateId();
+    const now = Date.now();
+    return [
+      ...list,
+      {
+        id: newId,
+        name: uniqueName,
+        modTitles: deduped,
+        modIds: dedupedIds,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+  });
+  if (!newId) {
+    return { ok: false, error: "Failed to import collection." };
+  }
+  lastImportedCollectionId.set(newId);
+  return { ok: true, id: newId };
+}
+```
+
+<Warning>
+  Imported collections only contain mod names/IDs. The mods themselves are not included. You'll need to install missing mods after importing.
+</Warning>
+
+## Collection Persistence
+
+Collections are stored in browser localStorage:
+
+```typescript
+// From collections.ts:506-556
+if (typeof window !== "undefined") {
+  try {
+    const raw = window.localStorage.getItem(COLLECTIONS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const hydrated = parsed.map((item) => ({
+          ...item,
+          modIds: Array.isArray(item.modIds) ? item.modIds : [],
+        }));
+        collectionsStore.set(hydrated);
+      }
+    }
+    const active = window.localStorage.getItem(ACTIVE_COLLECTION_KEY);
+    if (active) {
+      // Migration: old format was a single string ID, new format is JSON array
+      try {
+        const parsed = JSON.parse(active);
+        if (Array.isArray(parsed)) {
+          activeCollectionIds.set(parsed);
+        } else if (typeof parsed === "string") {
+          activeCollectionIds.set([parsed]);
+        }
+      } catch {
+        // Old format: plain string (not JSON)
+        activeCollectionIds.set([active]);
+      }
+    }
+  } catch {
+    // ignore malformed cache
+  }
+
+  collectionsStore.subscribe((val) => {
+    try {
+      window.localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(val));
+    } catch {
+      // ignore quota errors
+    }
+  });
+
+  activeCollectionIds.subscribe((val) => {
+    try {
+      if (val.length > 0) {
+        window.localStorage.setItem(ACTIVE_COLLECTION_KEY, JSON.stringify(val));
+      } else {
+        window.localStorage.removeItem(ACTIVE_COLLECTION_KEY);
+      }
+    } catch {
+      // ignore
+    }
+  });
+}
+```
+
+<Info>
+  Collections persist between app sessions and survive reinstalls (as long as browser data is not cleared).
+</Info>
+
+## Backend Collection System
+
+While the frontend uses localStorage, the backend has a SQLite-based collection system for potential future features:
+
+From `mod_collections.rs:24-149`, the backend implementation:
+
+```rust
+pub struct ModCollection {
+    pub name: String,
+    pub path: PathBuf,
+    pub hash: u64,
+}
+
+impl ModCollection {
+    pub fn new(name: String, path: PathBuf) -> Self {
+        use std::hash::DefaultHasher;
+        let mut hasher = DefaultHasher::new();
+        name.hash(&mut hasher);
+        path.to_string_lossy().hash(&mut hasher);
+        let hash = hasher.finish();
+
+        Self { name, path, hash }
+    }
+}
+
+pub struct ModCollectionManager {
+    collections: HashMap<u64, ModCollection>,
+}
+
+impl ModCollectionManager {
+    pub fn initialize_table(conn: &Connection) -> Result<()> {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS mod_collections (
+                hash INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                path TEXT NOT NULL
+            )",
+            [],
+        )?;
+        Ok(())
+    }
+
+    pub fn add_collection(&mut self, conn: &Connection, collection: ModCollection) -> Result<()> {
+        self.collections.insert(collection.hash, collection.clone());
+
+        conn.execute(
+            "INSERT OR REPLACE INTO mod_collections (hash, name, path) VALUES (?1, ?2, ?3)",
+            rusqlite::params![
+                collection.hash as i64,
+                &collection.name,
+                &collection.path.to_string_lossy().to_string(),
+            ],
+        )?;
+
+        Ok(())
+    }
+}
+```
+
+<Note>
+  The backend collection system is not currently exposed to the UI, but provides a foundation for future server-side collection features like cross-device sync.
+</Note>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Descriptive Names" icon="tag">
+    Use clear, descriptive names like "Joker Overhaul" instead of "Collection 1".
+  </Card>
+  <Card title="Include Dependencies" icon="link">
+    Always add framework mods (Steamodded/Talisman) to collections that need them.
+  </Card>
+  <Card title="Test Before Sharing" icon="vial">
+    Activate the collection and launch Balatro to verify it works before sharing.
+  </Card>
+  <Card title="Document Purpose" icon="file-lines">
+    When sharing, explain what the collection does and any special requirements.
+  </Card>
+</CardGroup>
+
+## Use Cases
+
+### Playstyle Collections
+
+Create collections for different ways to play:
+
+- **Challenge Mode** - Difficulty-increasing mods
+- **Quality of Life** - UI and convenience mods only
+- **Content Expansion** - New jokers, consumables, and decks
+- **Visual Overhaul** - Texture packs and visual mods
+
+### Multiplayer Sessions
+
+Quickly sync mod setups with friends:
+
+1. Agree on a mod list
+2. One person creates the collection
+3. Export and share the code
+4. Everyone imports and activates
+5. Launch Balatro with matching mod sets
+
+### Testing & Development
+
+For mod developers:
+
+- **Development** - Your mod + dependencies only
+- **Compatibility Test** - Your mod + popular mods
+- **Minimal** - Just framework mods
+- **Full Stack** - All development tools
+
+## Troubleshooting
+
+<Accordion title="Collection doesn't enable all mods">
+  Check that:
+  - All mods in the collection are installed
+  - The mods aren't in a disabled state from another source
+  - You have write permissions to the Mods folder
+</Accordion>
+
+<Accordion title="Import fails with 'Invalid collection code'">
+  This means:
+  - The code was corrupted during copy/paste
+  - The code format is incompatible (from a different app version)
+  - Try copying the code again from the source
+</Accordion>
+
+<Accordion title="Can't restore pre-collection state">
+  The snapshot is cleared when all collections are deactivated. If you want to save a state:
+  - Create a collection from your current enabled mods first
+  - Then experiment with other collections
+  - Activate your saved collection to restore
+</Accordion>
+
+<Accordion title="Collection has wrong mods after import">
+  Collections use normalized name matching:
+  - Spaces, case, and special characters are ignored
+  - "My Mod" matches "MyMod" and "my-mod"
+  - If catalog has multiple similar names, the first match is used
+  - Check the collection contents after import and adjust as needed
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Managing Mods" icon="sliders" href="/guide/managing-mods">
+    Learn more about enabling and disabling mods
+  </Card>
+  <Card title="Installing Mods" icon="download" href="/guide/installing-mods">
+    Install mods to add to your collections
+  </Card>
+</CardGroup>

@@ -1,0 +1,276 @@
+---
+title: Launch Modes
+description: Switch between vanilla and modded Balatro gameplay
+---
+
+BMM supports two launch modes that control whether mods are loaded when you start Balatro:
+
+<CardGroup cols={2}>
+  <Card title="Modded Mode" icon="puzzle-piece">
+    Launches Balatro with all enabled mods loaded (default)
+  </Card>
+  <Card title="Vanilla Mode" icon="ban">
+    Launches Balatro without any mods, as if it were unmodded
+  </Card>
+</CardGroup>
+
+## Why Use Launch Modes?
+
+Launch modes let you quickly switch between modded and vanilla gameplay without installing or uninstalling mods:
+
+- **Test achievements**: Some achievements require vanilla gameplay
+- **Troubleshoot issues**: Determine if a problem is caused by mods
+- **Try the base game**: Experience Balatro without modifications
+- **Quick switching**: Toggle between modes without managing mods
+
+<Info>
+  Your mods remain installed in both modes. Vanilla mode simply prevents them from loading.
+</Info>
+
+## How Launch Modes Work
+
+### Modded Mode (Default)
+
+When launching in modded mode:
+
+1. **Lovely injector is enabled** - The injector files are active
+2. **Mods are scanned** - Lovely reads your Mods folder
+3. **Dependencies are resolved** - Mods load in the correct order
+4. **Mods are injected** - Lua code is injected into Balatro
+5. **Game starts with mods** - All enabled mods are active
+
+### Vanilla Mode
+
+Vanilla mode uses different approaches depending on your Lovely version:
+
+#### Lovely 0.9.0+
+
+Lovely 0.9.0 introduced the `--vanilla` flag, which is the preferred method:
+
+- **Injector stays installed** - `version.dll` / `liblovely.dylib` remains in place
+- **`--vanilla` flag is passed** - Tells Lovely to skip mod loading
+- **Mods are not loaded** - The Mods folder is ignored
+- **Game starts clean** - Balatro runs as if unmodded
+
+<Tip>
+  The `--vanilla` flag is the fastest way to launch vanilla mode. No files are moved or renamed.
+</Tip>
+
+#### Lovely < 0.9.0 (Fallback)
+
+For older Lovely versions that don't support `--vanilla`:
+
+- **Injector is disabled** - Lovely files are renamed to `.disabled`
+- **Game launches normally** - Without the injector, mods cannot load
+- **Re-enabled on next modded launch** - Files are renamed back automatically
+
+<Warning>
+  If using Lovely < 0.9.0, vanilla launches are slower because files must be renamed. Consider updating Lovely.
+</Warning>
+
+## Switching Launch Modes
+
+You can change the launch mode in Settings:
+
+<Steps>
+  <Step title="Open settings">
+    Click the gear icon or navigate to **Settings**
+  </Step>
+  
+  <Step title="Find launch mode">
+    Locate the **Launch Mode** option
+  </Step>
+  
+  <Step title="Select mode">
+    Choose either **Modded** or **Vanilla**
+  </Step>
+  
+  <Step title="Launch Balatro">
+    Use the "Launch Balatro" button - your chosen mode will be used
+  </Step>
+</Steps>
+
+The selected mode persists across BMM restarts.
+
+## Launch Mode Indicator
+
+BMM displays the current launch mode:
+
+- In the **Launch Balatro** button (e.g., "Launch Balatro (Vanilla)")
+- In the **Settings** page
+- In the system tray tooltip (if enabled)
+
+## Platform-Specific Behavior
+
+### Windows
+
+<Accordion title="Lovely 0.9.0+">
+  - Uses `--vanilla` flag with `version.dll` in place
+  - No file changes needed for vanilla mode
+  - Fast switching between modes
+</Accordion>
+
+<Accordion title="Lovely < 0.9.0">
+  - Renames `version.dll` to `version.dll.disabled` for vanilla
+  - Renames back to `version.dll` for modded
+  - Slight delay due to file operations
+</Accordion>
+
+### macOS
+
+<Accordion title="Lovely 0.9.0+">
+  - Uses `--vanilla` flag
+  - `liblovely.dylib` remains in `~/Library/Application Support/Balatro/bins/`
+  - `DYLD_INSERT_LIBRARIES` is set normally, but Lovely skips mod loading
+</Accordion>
+
+<Accordion title="Lovely < 0.9.0">
+  - Renames `liblovely.dylib` to `liblovely.dylib.disabled`
+  - `DYLD_INSERT_LIBRARIES` is not set for vanilla launches
+  - Renames back for modded launches
+</Accordion>
+
+### Linux (Proton/Wine)
+
+<Accordion title="Lovely 0.9.0+">
+  - Uses `--vanilla` flag
+  - `version.dll` remains in the game directory
+  - `WINEDLLOVERRIDES` is set normally for modded mode
+  - Vanilla mode uses `--vanilla` flag instead of removing DLL
+</Accordion>
+
+<Accordion title="Lovely < 0.9.0">
+  - Renames `version.dll` to `version.dll.disabled` for vanilla
+  - `WINEDLLOVERRIDES` is omitted in vanilla mode
+  - DLL is restored from cache for modded launches
+</Accordion>
+
+### Linux (Native LOVE)
+
+<Accordion title="Lovely 0.9.0+">
+  - Uses `--vanilla` flag
+  - `liblovely.so` remains in place
+  - `LD_PRELOAD` is set, but Lovely skips mod loading
+</Accordion>
+
+<Accordion title="Lovely < 0.9.0">
+  - `LD_PRELOAD` is omitted entirely in vanilla mode
+  - `liblovely.so` is not loaded
+  - Restored for modded launches
+</Accordion>
+
+## Automatic Sync on Startup
+
+When BMM starts, it automatically syncs the injector state with your saved launch mode preference:
+
+- If **Modded** is selected, the injector is enabled
+- If **Vanilla** is selected:
+  - Lovely 0.9.0+: Injector remains enabled (uses `--vanilla` at launch)
+  - Lovely < 0.9.0: Injector is disabled
+
+This ensures your launch mode preference is always respected.
+
+## Comparison with Disabling Lovely
+
+Launch modes are different from completely disabling Lovely:
+
+| Feature | Vanilla Launch Mode | Disabling Lovely |
+|---------|-------------------|------------------|
+| **Mods stay installed** | ✅ Yes | ✅ Yes |
+| **Injector files** | In place (0.9.0+) or renamed | Renamed to .disabled |
+| **Easy to toggle** | ✅ One-click switch | Requires settings change |
+| **Performance** | Instant (0.9.0+) | Requires file rename |
+| **Use case** | Temporary vanilla gameplay | Completely disable modding |
+
+<Info>
+  Use **vanilla launch mode** for temporary vanilla gameplay. Use **disabling Lovely** if you want to completely turn off mod support.
+</Info>
+
+## Checking Lovely Version Support
+
+To see if your Lovely version supports the `--vanilla` flag:
+
+<Steps>
+  <Step title="Check version">
+    Go to **Settings > Lovely Injector**
+  </Step>
+  
+  <Step title="Look for version number">
+    If it shows 0.9.0 or higher, `--vanilla` is supported
+  </Step>
+  
+  <Step title="Update if needed">
+    Click "Update Lovely" to get the latest version
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Vanilla mode still loads mods">
+    **Possible causes**:
+    - Launching Balatro directly instead of through BMM
+    - Lovely version doesn't support `--vanilla` and file rename failed
+    - Cached mod state
+
+    **Solutions**:
+    1. Always launch through BMM's "Launch Balatro" button
+    2. Update to Lovely 0.9.0+ for reliable vanilla mode
+    3. Check Settings to ensure vanilla mode is actually selected
+    4. Restart BMM and try again
+  </Accordion>
+
+  <Accordion title="Can't switch back to modded mode">
+    **Possible causes**:
+    - File permission issues
+    - Lovely files missing or corrupted
+
+    **Solutions**:
+    1. Check that Lovely is enabled in Settings > Lovely Injector
+    2. Try reinstalling Lovely from settings
+    3. Ensure BMM has write permissions to the game directory
+    4. Check BMM logs for specific errors
+  </Accordion>
+
+  <Accordion title="Unknown Lovely version">
+    If BMM can't determine your Lovely version:
+    - It will assume `--vanilla` is supported (optimistic approach)
+    - This is safer than failing to provide vanilla mode
+    - Update Lovely to ensure it's properly versioned
+
+    **To fix**: Reinstall Lovely from Settings > Lovely Injector
+  </Accordion>
+
+  <Accordion title="Steam launches wrong mode">
+    If you launch Balatro directly from Steam:
+    - It will always use modded mode (if Lovely is installed)
+    - Launch modes only work when starting through BMM
+
+    **Solution**: Always use BMM's "Launch Balatro" button to respect your mode choice
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Keep Lovely updated" icon="arrows-rotate">
+    Update to Lovely 0.9.0+ for the best vanilla mode experience
+  </Card>
+  
+  <Card title="Use vanilla for testing" icon="flask">
+    Test whether issues occur in vanilla before reporting mod bugs
+  </Card>
+  
+  <Card title="Launch through BMM" icon="rocket">
+    Always use BMM's launch button to ensure the correct mode is used
+  </Card>
+  
+  <Card title="Quick toggle" icon="toggle-on">
+    Switch modes for different playstyles without managing mods
+  </Card>
+</CardGroup>
+
+## Related Topics
+
+- [Lovely Injector](/guide/lovely-injector) - Understanding the mod injection framework
+- [Settings](/guide/settings) - Configuring BMM preferences

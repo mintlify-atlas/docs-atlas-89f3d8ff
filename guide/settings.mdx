@@ -1,0 +1,415 @@
+---
+title: Settings
+description: Configuring Balatro Mod Manager preferences and options
+---
+
+BMM provides various settings to customize your modding experience. All settings are persisted in a local SQLite database and synchronized across app restarts.
+
+## Accessing Settings
+
+<Steps>
+  <Step title="Open settings">
+    Click the gear icon in the navigation bar or menu
+  </Step>
+  
+  <Step title="Browse categories">
+    Settings are organized by category for easy navigation
+  </Step>
+  
+  <Step title="Change preferences">
+    Toggle switches, select options, or enter values
+  </Step>
+  
+  <Step title="Save automatically">
+    Changes are saved immediately (no save button needed)
+  </Step>
+</Steps>
+
+## General Settings
+
+### Installation Path
+
+The Balatro game installation directory.
+
+<Accordion title="Auto-detection">
+  BMM automatically detects Balatro installations on:
+  - Steam (all platforms)
+  - GOG (Windows)
+  - Itch.io (if in standard location)
+  
+  If auto-detection fails, you can manually set the path.
+</Accordion>
+
+<Accordion title="Manual configuration">
+  To set manually:
+  1. Go to **Settings > General > Installation Path**
+  2. Click "Browse" to select the Balatro directory
+  3. Confirm the path contains `Balatro.exe` (Windows) or the appropriate executable
+  
+  Required for launching Balatro and installing Lovely.
+</Accordion>
+
+<Accordion title="Multiple installations">
+  If you have multiple Balatro installations (e.g., Steam and GOG):
+  - BMM uses the first detected installation by default
+  - You can manually select which installation to use
+  - Settings apply per-installation
+</Accordion>
+
+### Analytics
+
+Optional anonymous usage analytics to help improve BMM.
+
+<Info>
+  **Default**: Enabled (opt-out model)
+</Info>
+
+<Accordion title="What is collected?">
+  When enabled, BMM collects:
+  - Operating system and version
+  - BMM version
+  - Feature usage (which features are used)
+  - Error reports (anonymized stack traces)
+  
+  **Not collected**:
+  - Personal information
+  - Mod names or files
+  - System identifiers
+  - IP addresses (stripped before storage)
+</Accordion>
+
+<Accordion title="Disabling analytics">
+  To opt out:
+  1. Go to **Settings > General > Analytics**
+  2. Toggle "Enable Analytics" off
+  3. No data will be collected from this point forward
+</Accordion>
+
+## Lovely Injector Settings
+
+### Enable Lovely
+
+Toggle the Lovely mod injector on/off.
+
+<Warning>
+  Disabling Lovely prevents all mods from loading. Your mods remain installed but are not active.
+</Warning>
+
+- **Enabled**: Injector files are active, mods load normally
+- **Disabled**: Injector files are renamed to `.disabled`, mods do not load
+
+See [Lovely Injector](/guide/lovely-injector) for more details.
+
+### Lovely Console
+
+Display Lovely's debug console when launching Balatro.
+
+<Info>
+  **Default**: Disabled
+</Info>
+
+<Accordion title="Console output">
+  When enabled, a console window appears showing:
+  - Mod loading sequence and timing  
+  - Lua errors and warnings
+  - Dependency resolution
+  - API hook information
+  - Mod conflict warnings
+</Accordion>
+
+<Accordion title="Use cases">
+  Enable the console for:
+  - Troubleshooting mod loading issues
+  - Debugging your own mods
+  - Checking load order and dependencies
+  - Viewing performance metrics
+</Accordion>
+
+<Tip>
+  The console stays open even after Balatro closes, so you can review messages after the game exits.
+</Tip>
+
+### Lovely Version
+
+Displays the currently installed Lovely version (read-only).
+
+- Click **Check for Updates** to query GitHub for the latest release
+- Click **Update Lovely** to download and install the newest version
+- Click **Uninstall Lovely** to remove the injector entirely
+
+See [Lovely Injector](/guide/lovely-injector#installation-and-updates) for version management.
+
+## Launch Settings
+
+### Launch Mode
+
+Switch between modded and vanilla Balatro.
+
+<CardGroup cols={2}>
+  <Card title="Modded" icon="puzzle-piece">
+    Launch with all enabled mods loaded (default)
+  </Card>
+  <Card title="Vanilla" icon="ban">
+    Launch without any mods, as if unmodded
+  </Card>
+</CardGroup>
+
+<Info>
+  **Default**: Modded
+</Info>
+
+Launch modes are explained in detail in [Launch Modes](/guide/launch-modes).
+
+### Linux Prefix (Linux Only)
+
+Specify the Wine/Proton prefix for launching Balatro on Linux.
+
+<Accordion title="Auto-detection">
+  BMM automatically detects:
+  - Steam Play (Proton) prefix
+  - Lutris Wine prefix
+  - Standard Wine prefix in `~/.wine`
+</Accordion>
+
+<Accordion title="Manual configuration">
+  If auto-detection fails:
+  1. Go to **Settings > Launch > Linux Prefix**
+  2. Enter the path to your Wine/Proton prefix
+  3. Example: `~/.local/share/Steam/steamapps/compatdata/2379780/pfx`
+  
+  Required for Proton/Wine launches on Linux.
+</Accordion>
+
+## Appearance Settings
+
+### Background Effects
+
+Enable animated background effects in the BMM interface.
+
+<Info>
+  **Default**: Enabled
+</Info>
+
+- **Enabled**: Subtle animations and visual effects
+- **Disabled**: Static background for better performance or reduced distractions
+
+<Note>
+  Disabling backgrounds may improve performance on older systems or when running in a virtual machine.
+</Note>
+
+## Advanced Settings
+
+### Compatibility Helper
+
+Automatic mod compatibility checking and issue detection.
+
+<Info>
+  **Default**: Enabled
+</Info>
+
+<Accordion title="What it does">
+  When enabled, the compatibility helper:
+  - Detects missing dependencies (e.g., Steamodded not installed)
+  - Checks for version mismatches
+  - Warns about conflicting mods
+  - Validates mod load order
+  - Reports SMODS mods without Steamodded
+</Accordion>
+
+<Accordion title="How it works">
+  The compatibility helper runs:
+  - After mod installations
+  - Before launching Balatro (optional scan)
+  - When manually triggered from the UI
+  
+  It injects a Lua script that audits the Mods folder and reports issues.
+</Accordion>
+
+<Accordion title="Disabling the helper">
+  You may want to disable if:
+  - You prefer manual dependency management
+  - It's causing false positives
+  - You're developing mods and want raw behavior
+  
+  To disable:
+  1. Go to **Settings > Advanced > Compatibility Helper**  
+  2. Toggle "Enable Compatibility Helper" off
+</Accordion>
+
+<Warning>
+  Disabling the compatibility helper may result in missing dependency warnings and mod load failures.
+</Warning>
+
+### Database Checkpointing
+
+BMM uses a SQLite database with Write-Ahead Logging (WAL) for settings and mod tracking.
+
+<Accordion title="WAL mode benefits">
+  - Better read performance (readers don't block writers)
+  - Improved crash recovery
+  - Atomic commits
+</Accordion>
+
+<Accordion title="Automatic checkpointing">
+  BMM automatically:
+  - Checkpoints the WAL every 500 transactions
+  - Performs a final checkpoint on app shutdown
+  - Uses `TRUNCATE` mode to minimize file size
+</Accordion>
+
+<Note>
+  You don't need to manually manage database checkpointing. BMM handles it automatically.
+</Note>
+
+## Security Settings
+
+### Security Warning Acknowledgment
+
+BMM displays a security warning on first launch, informing users that mods can execute arbitrary code.
+
+<Accordion title="Why this matters">
+  Mods are Lua scripts that run inside Balatro with full access to:
+  - Game files
+  - User files (within game scope)
+  - Network requests (if the mod makes them)
+  
+  Only install mods from trusted sources.
+</Accordion>
+
+<Accordion title="Acknowledging the warning">
+  The warning appears once:
+  - On first launch of BMM
+  - After a database reset
+  
+  Click "I Understand" to proceed. This setting is stored in the database.
+</Accordion>
+
+## Settings Storage
+
+All settings are stored in a SQLite database:
+
+- **Windows**: `%APPDATA%\Balatro\bmm_storage.db`
+- **macOS**: `~/Library/Application Support/Balatro/bmm_storage.db`
+- **Linux**: `~/.config/Balatro/bmm_storage.db`
+- **Flatpak**: `~/.var/app/io.balatro.ModManager/config/Balatro/bmm_storage.db`
+
+<Accordion title="Database schema">
+  The database contains two main tables:
+  
+  **`settings` table**:
+  - `setting` (TEXT PRIMARY KEY): Setting name
+  - `value` (TEXT): Setting value
+  
+  **`installed_mods` table**:
+  - `name` (TEXT PRIMARY KEY): Mod name
+  - `path` (TEXT): Filesystem path
+  - `dependencies` (TEXT): JSON array of dependency names
+  - `current_version` (TEXT): Installed version
+</Accordion>
+
+<Accordion title="Backup and migration">
+  The database automatically:
+  - Migrates to new schema versions on BMM updates
+  - Creates backups before migrations (`bmm_storage.db.bak`)
+  - Uses WAL mode for crash safety
+  
+  If corruption occurs, BMM will attempt recovery from the backup.
+</Accordion>
+
+## Resetting Settings
+
+To reset all settings to defaults:
+
+<Warning>
+  **Destructive operation**: This cannot be undone.
+</Warning>
+
+<Steps>
+  <Step title="Close BMM">
+    Exit the application completely
+  </Step>
+  
+  <Step title="Delete or rename the database">
+    Rename `bmm_storage.db` to `bmm_storage.db.old` (to keep a backup)
+  </Step>
+  
+  <Step title="Restart BMM">
+    A fresh database will be created with default settings
+  </Step>
+  
+  <Step title="Reconfigure as needed">
+    Set your preferences again (installation path, launch mode, etc.)
+  </Step>
+</Steps>
+
+<Info>
+  Resetting the database removes all settings and mod tracking. Your actual mod files in the Mods folder are not affected.
+</Info>
+
+## Import/Export Settings
+
+Currently, BMM does not have a built-in import/export feature for settings. However, you can manually:
+
+- **Export**: Copy the `bmm_storage.db` file to another location or system
+- **Import**: Replace the database file with a copy from another installation
+
+<Note>
+  Ensure BMM is closed when copying database files to avoid corruption.
+</Note>
+
+## Troubleshooting Settings Issues
+
+<AccordionGroup>
+  <Accordion title="Settings not persisting">
+    **Possible causes**:
+    - Database file is read-only or locked
+    - Insufficient permissions
+    - Database corruption
+
+    **Solutions**:
+    1. Check file permissions on `bmm_storage.db`
+    2. Ensure no other process has the database open
+    3. Try resetting the database (see above)
+    4. Check BMM logs for database errors
+  </Accordion>
+
+  <Accordion title="Settings reset after update">
+    **Possible causes**:
+    - Database migration failed
+    - Old database was corrupted
+
+    **Solutions**:
+    1. Check for `bmm_storage.db.bak` (migration backup)
+    2. If present, restore it and retry
+    3. If migration keeps failing, reset the database
+  </Accordion>
+
+  <Accordion title="Can't change installation path">
+    **Possible causes**:
+    - Path is invalid or doesn't contain Balatro
+    - Permissions issue
+
+    **Solutions**:
+    1. Verify the path contains `Balatro.exe` (or equivalent)
+    2. Ensure you have read access to the directory
+    3. Try selecting the path via the file browser
+  </Accordion>
+
+  <Accordion title="Database locked errors">
+    **Possible causes**:
+    - Multiple BMM instances running
+    - Another process has the database open
+
+    **Solutions**:
+    1. Close all BMM windows
+    2. Check Task Manager for lingering BMM processes
+    3. Restart your computer if the lock persists
+    4. BMM uses a 5-second busy timeout to handle temporary locks
+  </Accordion>
+</AccordionGroup>
+
+## Related Topics
+
+- [Lovely Injector](/guide/lovely-injector) - Managing the mod injection framework
+- [Launch Modes](/guide/launch-modes) - Switching between modded and vanilla
+- [Discord Integration](/guide/discord-integration) - Discord Rich Presence settings

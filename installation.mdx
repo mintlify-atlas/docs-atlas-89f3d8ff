@@ -1,0 +1,401 @@
+---
+title: Installation
+description: Download and install Balatro Mod Manager on Windows, macOS, Linux, or Steam Deck
+---
+
+# Installing Balatro Mod Manager
+
+Balatro Mod Manager is available for Windows, macOS, and Linux. The installer is standalone and does not require any external libraries or dependencies.
+
+<Note>
+  Before installing, ensure you have Balatro installed on your system. BMM works with the Steam version and DRM-free versions, but **NOT** with Xbox Game Pass.
+</Note>
+
+## Download
+
+Download the latest version of Balatro Mod Manager from the official GitHub releases page:
+
+<Card title="Download Balatro Mod Manager" icon="download" href="https://github.com/skyline69/balatro-mod-manager/releases/latest">
+  Visit the releases page to download the installer for your platform
+</Card>
+
+On the releases page, scroll down to **Assets** and select the appropriate installer for your operating system.
+
+---
+
+## Windows Installation
+
+<Steps>
+  <Step title="Download the Installer">
+    Choose one of the following installers:
+    - `Balatro.Mod.Manager_x.x.x_x64-setup.exe` (recommended)
+    - `Balatro.Mod.Manager_x.x.x_x64_en-US.msi`
+    
+    Both installers are code-signed for security and authenticity.
+  </Step>
+  
+  <Step title="Run the Installer">
+    Double-click the downloaded file. Windows may show a SmartScreen warning because this is downloaded software. Click **More info** and then **Run anyway**.
+  </Step>
+  
+  <Step title="Follow Installation Wizard">
+    The installer will guide you through the setup process:
+    - Accept the license agreement
+    - Choose installation location (default is recommended)
+    - Create desktop shortcut (optional)
+  </Step>
+  
+  <Step title="Launch Balatro Mod Manager">
+    After installation completes, launch BMM from your Start Menu or desktop shortcut.
+  </Step>
+</Steps>
+
+<Info>
+  The Windows installer automatically adds BMM to your Start Menu and optionally creates a desktop shortcut for easy access.
+</Info>
+
+---
+
+## macOS Installation
+
+<Steps>
+  <Step title="Download the DMG">
+    Download `Balatro.Mod.Manager_x.x.x_universal.dmg` from the releases page. This is a universal binary that works on both Intel and Apple Silicon Macs.
+  </Step>
+  
+  <Step title="Open the DMG File">
+    Double-click the downloaded DMG file to mount it. A Finder window will open.
+  </Step>
+  
+  <Step title="Drag to Applications">
+    Drag the Balatro Mod Manager icon to your Applications folder.
+  </Step>
+  
+  <Step title="First Launch">
+    Open BMM from your Applications folder. macOS may show a security warning because the app was downloaded from the internet.
+    
+    If you see a warning:
+    1. Open **System Preferences** > **Privacy & Security**
+    2. Scroll down to find the message about Balatro Mod Manager
+    3. Click **Open Anyway**
+    4. Confirm by clicking **Open** in the dialog
+  </Step>
+</Steps>
+
+<Warning>
+  **System Requirements**: macOS 11 (Big Sur) or later is required. The universal binary supports both Intel and Apple Silicon (M1/M2/M3) Macs.
+</Warning>
+
+---
+
+## Linux Installation
+
+Linux users have several installation options. Flatpak is recommended, especially for Steam Deck users.
+
+### Flatpak (Recommended for Steam Deck)
+
+Flatpak provides the best compatibility and sandboxed security.
+
+<Tabs>
+  <Tab title="Download Method">
+    <Steps>
+      <Step title="Download Flatpak Bundle">
+        Download the `.flatpak` file from the [releases page](https://github.com/skyline69/balatro-mod-manager/releases/latest).
+      </Step>
+      
+      <Step title="Install the Bundle">
+        ```bash
+        flatpak install --user balatro-mod-manager.flatpak
+        ```
+      </Step>
+      
+      <Step title="Launch the Application">
+        ```bash
+        flatpak run io.balatro.ModManager
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Build from Source">
+    <Steps>
+      <Step title="Install Prerequisites">
+        Install flatpak-builder and required runtimes:
+        ```bash
+        flatpak install org.gnome.Platform//47 org.gnome.Sdk//47 \
+          org.freedesktop.Sdk.Extension.node20//24.08 \
+          org.freedesktop.Sdk.Extension.rust-stable//24.08
+        ```
+      </Step>
+      
+      <Step title="Clone the Repository">
+        ```bash
+        git clone https://github.com/skyline69/balatro-mod-manager.git
+        cd balatro-mod-manager
+        ```
+      </Step>
+      
+      <Step title="Build and Bundle">
+        ```bash
+        flatpak-builder --force-clean --repo=repo build-dir \
+          packaging/flatpak/io.balatro.ModManager.json
+        flatpak build-bundle repo balatro-mod-manager.flatpak \
+          io.balatro.ModManager master
+        ```
+      </Step>
+      
+      <Step title="Install and Run">
+        ```bash
+        flatpak install --user balatro-mod-manager.flatpak
+        flatpak run io.balatro.ModManager
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Arch Linux (AUR)
+
+Arch Linux users can install from the AUR using their preferred helper:
+
+```bash
+yay -S balatro-mod-manager-bin
+# or
+paru -S balatro-mod-manager-bin
+```
+
+After installation, launch from your application menu or run `balatro-mod-manager` from the terminal.
+
+### Debian / Ubuntu
+
+<Steps>
+  <Step title="Download the .deb Package">
+    Download `Balatro.Mod.Manager_x.x.x_amd64.deb` from the releases page.
+  </Step>
+  
+  <Step title="Install with apt">
+    ```bash
+    sudo apt install ./Balatro.Mod.Manager_*_amd64.deb
+    ```
+  </Step>
+  
+  <Step title="Launch the Application">
+    Run from your application menu or terminal:
+    ```bash
+    balatro-mod-manager
+    ```
+  </Step>
+</Steps>
+
+### AppImage (Universal Linux)
+
+For distributions not listed above, use the AppImage:
+
+<Steps>
+  <Step title="Download AppImage">
+    Download `Balatro.Mod.Manager_x.x.x_amd64.AppImage` from the releases page.
+  </Step>
+  
+  <Step title="Make Executable">
+    ```bash
+    chmod +x Balatro.Mod.Manager_*_amd64.AppImage
+    ```
+  </Step>
+  
+  <Step title="Run the Application">
+    ```bash
+    ./Balatro.Mod.Manager_*_amd64.AppImage
+    ```
+  </Step>
+</Steps>
+
+<Info>
+  **Linux Compatibility**: On Linux, Balatro Mod Manager currently supports the Steam version of Balatro only. The manager will automatically detect your Steam installation path.
+</Info>
+
+---
+
+## Steam Deck Installation
+
+Steam Deck users should use the Flatpak installation method for best compatibility.
+
+<Steps>
+  <Step title="Switch to Desktop Mode">
+    Press the Steam button and select **Power** > **Switch to Desktop**.
+  </Step>
+  
+  <Step title="Download Flatpak Bundle">
+    Open Firefox or another browser and download the `.flatpak` file from the releases page.
+  </Step>
+  
+  <Step title="Install via Discover">
+    Double-click the downloaded `.flatpak` file. It should open in Discover (the software center). Click **Install**.
+    
+    Alternatively, use the terminal:
+    ```bash
+    flatpak install --user ~/Downloads/balatro-mod-manager.flatpak
+    ```
+  </Step>
+  
+  <Step title="Add to Gaming Mode (Optional)">
+    To access BMM from Gaming Mode:
+    1. In Desktop Mode, open Steam
+    2. Click **Games** > **Add a Non-Steam Game to My Library**
+    3. Click **Browse** and navigate to:
+       `/var/lib/flatpak/exports/bin/io.balatro.ModManager` or
+       `~/.local/share/flatpak/exports/bin/io.balatro.ModManager`
+    4. Add it to Steam
+    
+    Now BMM will appear in your Steam library in Gaming Mode.
+  </Step>
+</Steps>
+
+<Tip>
+  On Steam Deck, you can manage your mods in Desktop Mode and then switch back to Gaming Mode to play Balatro with your new mods.
+</Tip>
+
+---
+
+## Building from Source
+
+Advanced users can build Balatro Mod Manager from source. This is useful for:
+- Contributing to development
+- Building custom versions
+- Verifying security and integrity
+- Using the latest unreleased features
+
+### Prerequisites
+
+You'll need the following tools installed:
+
+- [Rust](https://www.rust-lang.org/tools/install) - For the backend
+- [Bun](https://bun.sh/) - For frontend package management
+- [Task](https://taskfile.dev/) - Task runner for build commands
+
+<Tabs>
+  <Tab title="Windows">
+    Install prerequisites:
+    ```powershell
+    # Install Rust
+    winget install Rustlang.Rustup
+    
+    # Install Bun
+    powershell -c "irm bun.sh/install.ps1 | iex"
+    
+    # Install Task
+    winget install Task.Task
+    ```
+  </Tab>
+  
+  <Tab title="macOS">
+    Install prerequisites using Homebrew:
+    ```bash
+    # Install Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    
+    # Install Bun
+    curl -fsSL https://bun.sh/install | bash
+    
+    # Install Task
+    brew install go-task
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    Install prerequisites:
+    ```bash
+    # Install Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    
+    # Install Bun
+    curl -fsSL https://bun.sh/install | bash
+    
+    # Install Task (distribution-specific)
+    # Arch: sudo pacman -S go-task
+    # Fedora: sudo dnf install go-task
+    # Ubuntu/Debian: See https://taskfile.dev/installation/
+    
+    # For Flatpak builds, also install:
+    flatpak install org.gnome.Platform//47 org.gnome.Sdk//47 \
+      org.freedesktop.Sdk.Extension.node20//24.08 \
+      org.freedesktop.Sdk.Extension.rust-stable//24.08
+    ```
+  </Tab>
+</Tabs>
+
+### Build Instructions
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/skyline69/balatro-mod-manager.git
+    cd balatro-mod-manager
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    bun install --allow-scripts
+    ```
+  </Step>
+  
+  <Step title="Build for Your Platform">
+    <Tabs>
+      <Tab title="Windows">
+        ```bash
+        task release-windows
+        ```
+        The built installer will be in `src-tauri/target/release/bundle/`
+      </Tab>
+      
+      <Tab title="macOS">
+        ```bash
+        task release-macos
+        ```
+        The DMG will be in `src-tauri/target/release/bundle/dmg/`
+      </Tab>
+      
+      <Tab title="Linux">
+        ```bash
+        task release-linux
+        ```
+        AppImage, .deb, and .rpm files will be in `src-tauri/target/release/bundle/`
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+<Info>
+  For development builds, use `task debug` or `task dev` to launch the app in development mode with hot reloading.
+</Info>
+
+---
+
+## Verification and Security
+
+Balatro Mod Manager releases are code-signed using [SignPath](https://signpath.io) to ensure authenticity and security. This helps verify that:
+
+- The software hasn't been tampered with
+- It comes from a trusted source
+- The download is genuine
+
+On Windows and macOS, the operating system will automatically verify the signature when you run the installer.
+
+---
+
+## Next Steps
+
+Now that you have Balatro Mod Manager installed:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Set up BMM and get familiar with the interface
+  </Card>
+  <Card title="Install Your First Mod" icon="puzzle-piece" href="/first-mod">
+    Learn how to browse, install, and manage mods
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+Having issues with installation? Check the [Troubleshooting](/troubleshooting) guide or visit our [GitHub Issues](https://github.com/skyline69/balatro-mod-manager/issues) page for help.

@@ -1,0 +1,241 @@
+---
+title: 'Browsing Mods'
+description: 'Discover and explore mods in the Balatro Mod Manager catalog'
+icon: 'search'
+---
+
+## Overview
+
+The Balatro Mod Manager provides a comprehensive catalog of mods with powerful search and filtering capabilities. Browse thousands of mods across multiple categories with thumbnails, descriptions, and download statistics.
+
+## Search Functionality
+
+The search system uses FlexSearch for fast, client-side searching across the mod catalog.
+
+### Basic Search
+
+Search for mods by title or author:
+
+<Steps>
+  <Step title="Open Search">
+    Click the Search tab in the left sidebar to access the search interface.
+  </Step>
+  <Step title="Enter Query">
+    Type at least 2 characters to start searching. Results appear instantly as you type.
+  </Step>
+  <Step title="View Results">
+    Search results display in a grid layout with mod cards showing thumbnails and basic information.
+  </Step>
+</Steps>
+
+<Info>
+  The search index is built using a forward tokenizer with match preset, allowing partial word matching for flexible queries.
+</Info>
+
+### Search Implementation
+
+From `SearchView.svelte:267-277`, the search index is configured:
+
+```javascript
+searchIndex = new IndexCtor({
+  tokenize: "forward",
+  preset: "match",
+  cache: true,
+});
+currentMods.forEach((mod, idx) => {
+  const searchText = `${mod.title} ${mod.publisher}`.toLowerCase();
+  if (searchIndex) searchIndex.add(idx, searchText);
+});
+```
+
+## Category Browsing
+
+Mods are organized into categories for easy discovery:
+
+| Category | Description |
+|----------|-------------|
+| **Content** | New game content (jokers, consumables, decks) |
+| **Joker** | Joker-specific mods |
+| **Quality of Life** | UI improvements and convenience features |
+| **Technical** | Framework and API mods |
+| **Miscellaneous** | Other mod types |
+| **Resource Packs** | Visual and audio customizations |
+| **API** | Developer tools and libraries |
+
+<Note>
+  Categories are defined in `modStore.ts:172-180` as an enum matching the backend classification system.
+</Note>
+
+### Browsing by Category
+
+<Steps>
+  <Step title="Select Category">
+    Click a category from the left sidebar to filter mods.
+  </Step>
+  <Step title="Browse Results">
+    Mods in the selected category display in a paginated grid (12 items per page by default).
+  </Step>
+  <Step title="View Details">
+    Click any mod card to open the detailed view with full description and installation options.
+  </Step>
+</Steps>
+
+## Sorting Options
+
+Sort mods by various criteria to find what you need:
+
+- **Downloads (Descending)** - Most popular mods first (default)
+- **Downloads (Ascending)** - Least popular mods first
+- **Name (A-Z)** - Alphabetical order
+- **Name (Z-A)** - Reverse alphabetical
+- **Last Updated (Newest)** - Recently updated mods
+- **Last Updated (Oldest)** - Oldest updates first
+
+<Tip>
+  Download counts are refreshed automatically every 60 seconds when browsing the catalog.
+</Tip>
+
+## Mod Cards
+
+Each mod displays as a card with key information:
+
+### Card Contents
+
+- **Thumbnail** - Mod cover image (cached locally for performance)
+- **Title** - Mod name
+- **Author** - Mod creator
+- **Download Count** - Total downloads
+- **Categories** - Category badges
+- **Install Status** - Shows if mod is already installed
+
+### Thumbnail System
+
+Thumbnails are cached efficiently to reduce bandwidth:
+
+<Accordion title="Thumbnail Caching Details">
+  The app uses a background thumbnail queue (`thumb_queue.rs`) to download and cache mod images:
+  
+  - Thumbnails are stored locally in the app's cache directory
+  - The system enqueues missing thumbnails during catalog refresh
+  - Images are fetched asynchronously without blocking the UI
+  - Cached thumbnails persist between sessions
+  
+  From `Mods.svelte:1441-1462`, thumbnails are enqueued after catalog load:
+  
+  ```typescript
+  const thumbItems = items
+    .filter((i) => i.image_url && /^https?:\/\//i.test(i.image_url))
+    .map((i) => ({ title: i.meta.title, url: i.image_url }));
+  if (thumbItems.length > 0) {
+    invoke("enqueue_thumbnails", { items: toEnqueue }).catch(() => {});
+  }
+  ```
+</Accordion>
+
+## Pagination
+
+The catalog uses pagination to handle large mod lists efficiently:
+
+- **12 mods per page** by default (configurable in `modStore.ts:114`)
+- **5 visible page buttons** at a time
+- Navigation with Previous/Next buttons
+- Jump directly to specific pages
+
+<Info>
+  Pagination settings are stored in the `paginationWindow` store with `startPage`, `totalPages`, and `maxVisiblePages` properties.
+</Info>
+
+## Popular Mods
+
+The default view shows mods sorted by popularity (downloads descending). This helps you discover:
+
+- Most downloaded mods
+- Community favorites
+- Well-maintained projects
+- Battle-tested content
+
+## Installed Mods View
+
+Switch to the "Installed Mods" category to see only your installed content:
+
+<CardGroup cols={2}>
+  <Card title="Catalog Mods" icon="download">
+    Mods installed from the online catalog, showing:
+    - Install status
+    - Update availability
+    - Enable/disable toggle
+  </Card>
+  <Card title="Local Mods" icon="folder">
+    Manually installed mods detected in the Mods directory:
+    - Local mod metadata
+    - Author information
+    - Dependencies and conflicts
+  </Card>
+</CardGroup>
+
+### Search Installed Mods
+
+Filter your installed mods by name or author:
+
+```typescript
+// From Mods.svelte:143-157
+function matchesInstalledSearch(
+  name: string,
+  authorOrPublisher?: string | string[],
+): boolean {
+  const searchValue = $installedModsSearchStore;
+  if (!searchValue.trim()) return true;
+  const query = searchValue.toLowerCase().trim();
+  const normalizedName = name.toLowerCase();
+  if (normalizedName.includes(query)) return true;
+  // Also search by author
+  if (authorOrPublisher) {
+    return authorOrPublisher.toLowerCase().includes(query);
+  }
+  return false;
+}
+```
+
+## Performance Optimizations
+
+The browsing experience is optimized for speed:
+
+### Virtual Scrolling
+
+From `Mods.svelte:787-826`, the UI implements virtual scrolling:
+
+- Renders only visible mods initially (36-60 cards)
+- Extends render window as you scroll (chunks of 24)
+- Uses Intersection Observer to detect when more content is needed
+- Reduces memory usage for large catalogs
+
+### Catalog Caching
+
+The mod catalog is cached for offline access:
+
+<Steps>
+  <Step title="Initial Load">
+    On first launch, the catalog is fetched from the remote repository.
+  </Step>
+  <Step title="LocalStorage Persistence">
+    The catalog is saved to browser localStorage with a 2-second debounce (`modStore.ts:294-310`).
+  </Step>
+  <Step title="Background Refresh">
+    Subsequent launches load from cache instantly, then refresh in the background.
+  </Step>
+</Steps>
+
+<Warning>
+  If localStorage quota is exceeded, the cache is cleared to prevent corruption. The app monitors storage quota on startup.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installing Mods" icon="download" href="/guide/installing-mods">
+    Learn how to install mods from the catalog
+  </Card>
+  <Card title="Managing Mods" icon="sliders" href="/guide/managing-mods">
+    Manage your installed mods
+  </Card>
+</CardGroup>

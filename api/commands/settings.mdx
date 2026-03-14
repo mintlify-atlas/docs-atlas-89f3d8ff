@@ -1,0 +1,578 @@
+---
+title: Settings Commands
+description: Tauri commands for managing application settings in Balatro Mod Manager
+---
+
+## Overview
+
+Settings commands manage user preferences and application configuration, including Lovely console, Discord Rich Presence, launch modes, and platform-specific settings.
+
+---
+
+## get_lovely_console_status
+
+Gets whether the Lovely console is enabled.
+
+### Rust Signature
+
+```rust
+pub async fn get_lovely_console_status(
+    state: tauri::State<'_, AppState>
+) -> Result<bool, String>
+```
+
+### Returns
+
+<ResponseField name="enabled" type="bool">
+  `true` if Lovely console is enabled, `false` otherwise
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const getConsoleStatus = async () => {
+  const enabled = await invoke<boolean>('get_lovely_console_status');
+  console.log(`Console is ${enabled ? 'enabled' : 'disabled'}`);
+  return enabled;
+};
+```
+
+<Note>
+  The Lovely console provides debugging output when enabled. On Windows, it shows a console window. On macOS, it launches via Terminal.
+</Note>
+
+---
+
+## set_lovely_console_status
+
+Enables or disables the Lovely console.
+
+### Rust Signature
+
+```rust
+pub async fn set_lovely_console_status(
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String>
+```
+
+<ParamField path="enabled" type="bool" required>
+  `true` to enable console, `false` to disable
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Toggle Console
+import { invoke } from '@tauri-apps/api/core';
+
+const toggleConsole = async (enabled: boolean) => {
+  await invoke('set_lovely_console_status', { enabled });
+  console.log(`Console ${enabled ? 'enabled' : 'disabled'}`);
+};
+```
+
+```typescript With State Management
+import { invoke } from '@tauri-apps/api/core';
+import { writable } from 'svelte/store';
+
+const consoleEnabled = writable(false);
+
+const updateConsole = async (enabled: boolean) => {
+  await invoke('set_lovely_console_status', { enabled });
+  consoleEnabled.set(enabled);
+};
+```
+</CodeGroup>
+
+---
+
+## get_discord_rpc_status
+
+Gets whether Discord Rich Presence is enabled.
+
+### Rust Signature
+
+```rust
+pub async fn get_discord_rpc_status(
+    state: tauri::State<'_, AppState>
+) -> Result<bool, String>
+```
+
+### Returns
+
+<ResponseField name="enabled" type="bool">
+  `true` if Discord RPC is enabled
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const getRpcStatus = async () => {
+  return await invoke<boolean>('get_discord_rpc_status');
+};
+```
+
+---
+
+## set_discord_rpc_status
+
+Enables or disables Discord Rich Presence.
+
+### Rust Signature
+
+```rust
+pub async fn set_discord_rpc_status(
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String>
+```
+
+<ParamField path="enabled" type="bool" required>
+  `true` to enable Discord RPC
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Toggle RPC
+import { invoke } from '@tauri-apps/api/core';
+
+const toggleDiscordRPC = async (enabled: boolean) => {
+  await invoke('set_discord_rpc_status', { enabled });
+};
+```
+
+```typescript Settings Panel
+const updateRPCSetting = async (checkbox: HTMLInputElement) => {
+  const enabled = checkbox.checked;
+  
+  try {
+    await invoke('set_discord_rpc_status', { enabled });
+    console.log('Discord RPC updated');
+  } catch (error) {
+    // Revert checkbox on error
+    checkbox.checked = !enabled;
+    alert(`Failed to update Discord RPC: ${error}`);
+  }
+};
+```
+</CodeGroup>
+
+<Note>
+  Changes take effect immediately without requiring a restart.
+</Note>
+
+---
+
+## get_background_state
+
+Gets whether the animated background is enabled.
+
+### Rust Signature
+
+```rust
+pub async fn get_background_state(
+    state: tauri::State<'_, AppState>
+) -> Result<bool, String>
+```
+
+### Returns
+
+<ResponseField name="enabled" type="bool">
+  `true` if background animation is enabled
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const getBackgroundSetting = async () => {
+  return await invoke<boolean>('get_background_state');
+};
+```
+
+---
+
+## set_background_state
+
+Enables or disables the animated background.
+
+### Rust Signature
+
+```rust
+pub async fn set_background_state(
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String>
+```
+
+<ParamField path="enabled" type="bool" required>
+  `true` to enable background animation
+</ParamField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const toggleBackground = async (enabled: boolean) => {
+  await invoke('set_background_state', { enabled });
+};
+```
+
+---
+
+## get_compat_helper_status
+
+Gets whether the compatibility helper is enabled.
+
+### Rust Signature
+
+```rust
+pub async fn get_compat_helper_status(
+    state: tauri::State<'_, AppState>
+) -> Result<bool, String>
+```
+
+### Returns
+
+<ResponseField name="enabled" type="bool">
+  `true` if compatibility helper is enabled
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const getCompatHelper = async () => {
+  return await invoke<boolean>('get_compat_helper_status');
+};
+```
+
+<Note>
+  The compatibility helper provides automatic fixes for common mod compatibility issues.
+</Note>
+
+---
+
+## set_compat_helper_status
+
+Enables or disables the compatibility helper and synchronizes its state.
+
+### Rust Signature
+
+```rust
+pub async fn set_compat_helper_status(
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String>
+```
+
+<ParamField path="enabled" type="bool" required>
+  `true` to enable compatibility helper
+</ParamField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const setCompatHelper = async (enabled: boolean) => {
+  await invoke('set_compat_helper_status', { enabled });
+  console.log(`Compat helper ${enabled ? 'enabled' : 'disabled'}`);
+};
+```
+
+<Note>
+  This command automatically syncs the compatibility helper files when the setting changes.
+</Note>
+
+---
+
+## get_launch_mode
+
+Gets the current launch mode (modded or vanilla).
+
+### Rust Signature
+
+```rust
+pub async fn get_launch_mode(
+    state: tauri::State<'_, AppState>
+) -> Result<String, String>
+```
+
+### Returns
+
+<ResponseField name="mode" type="String">
+  Either `"modded"` or `"vanilla"`
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Get Mode
+import { invoke } from '@tauri-apps/api/core';
+
+type LaunchMode = 'modded' | 'vanilla';
+
+const getLaunchMode = async () => {
+  const mode = await invoke<LaunchMode>('get_launch_mode');
+  return mode;
+};
+```
+
+```typescript Display Mode
+const displayLaunchMode = async () => {
+  const mode = await invoke<string>('get_launch_mode');
+  const label = mode === 'modded' ? 'With Mods' : 'Vanilla';
+  console.log(`Launch mode: ${label}`);
+  return label;
+};
+```
+</CodeGroup>
+
+---
+
+## set_launch_mode
+
+Sets the launch mode and toggles injector files accordingly.
+
+### Rust Signature
+
+```rust
+pub async fn set_launch_mode(
+    state: tauri::State<'_, AppState>,
+    mode: String,
+) -> Result<(), String>
+```
+
+<ParamField path="mode" type="String" required>
+  Must be either `"modded"` or `"vanilla"`
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Set Mode
+import { invoke } from '@tauri-apps/api/core';
+
+const setLaunchMode = async (mode: 'modded' | 'vanilla') => {
+  try {
+    await invoke('set_launch_mode', { mode });
+    console.log(`Launch mode set to: ${mode}`);
+  } catch (error) {
+    console.error('Failed to set launch mode:', error);
+    throw error;
+  }
+};
+```
+
+```typescript Toggle Between Modes
+const toggleLaunchMode = async () => {
+  const current = await invoke<string>('get_launch_mode');
+  const newMode = current === 'modded' ? 'vanilla' : 'modded';
+  
+  await invoke('set_launch_mode', { mode: newMode });
+  return newMode;
+};
+```
+
+```typescript Launch Button
+const launchWithMode = async (mode: 'modded' | 'vanilla') => {
+  // Set the desired mode
+  await invoke('set_launch_mode', { mode });
+  
+  // Launch Balatro
+  await invoke('launch_balatro');
+};
+```
+</CodeGroup>
+
+<Warning>
+  The mode parameter is case-sensitive and must be exactly `"modded"` or `"vanilla"`. Invalid values will return an error.
+</Warning>
+
+<Note>
+  This command automatically enables/disables the Lovely injector files based on the mode.
+</Note>
+
+---
+
+## get_linux_prefix
+
+Gets the Linux launch prefix command (Steam/Proton configuration).
+
+### Rust Signature
+
+```rust
+pub async fn get_linux_prefix(
+    state: tauri::State<'_, AppState>
+) -> Result<String, String>
+```
+
+### Returns
+
+<ResponseField name="prefix" type="String">
+  The launch prefix command (empty string if not set)
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const getLinuxPrefix = async () => {
+  const prefix = await invoke<string>('get_linux_prefix');
+  return prefix || 'No prefix configured';
+};
+```
+
+<Note>
+  **Linux-only:** This setting is only used on Linux for configuring Steam/Proton launch commands.
+</Note>
+
+---
+
+## set_linux_prefix
+
+Sets the Linux launch prefix command.
+
+### Rust Signature
+
+```rust
+pub async fn set_linux_prefix(
+    state: tauri::State<'_, AppState>,
+    value: String,
+) -> Result<(), String>
+```
+
+<ParamField path="value" type="String" required>
+  Launch prefix command (can include environment variables and arguments)
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Set Prefix
+import { invoke } from '@tauri-apps/api/core';
+
+const setLinuxPrefix = async (prefix: string) => {
+  await invoke('set_linux_prefix', { value: prefix });
+};
+```
+
+```typescript Steam AppLaunch
+const setSteamPrefix = async () => {
+  const prefix = 'steam -applaunch 2379780';
+  await invoke('set_linux_prefix', { value: prefix });
+};
+```
+
+```typescript Custom Proton
+const setCustomProton = async (protonPath: string) => {
+  const prefix = `PROTON_USE_WINED3D=1 ${protonPath} run`;
+  await invoke('set_linux_prefix', { value: prefix });
+};
+```
+</CodeGroup>
+
+<Note>
+  The prefix command can include:
+  - Environment variables (e.g., `PROTON_LOG=1`)
+  - Steam launch arguments (e.g., `-applaunch 2379780`)
+  - Executable placeholder `{exe}` for the game executable
+</Note>
+
+---
+
+## is_security_warning_acknowledged
+
+Checks if the user has acknowledged the security warning.
+
+### Rust Signature
+
+```rust
+pub async fn is_security_warning_acknowledged(
+    state: tauri::State<'_, AppState>,
+) -> Result<bool, String>
+```
+
+### Returns
+
+<ResponseField name="acknowledged" type="bool">
+  `true` if warning has been acknowledged
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const checkSecurityWarning = async () => {
+  const acknowledged = await invoke<boolean>('is_security_warning_acknowledged');
+  
+  if (!acknowledged) {
+    // Show security warning dialog
+    showSecurityWarning();
+  }
+  
+  return acknowledged;
+};
+```
+
+---
+
+## set_security_warning_acknowledged
+
+Marks the security warning as acknowledged.
+
+### Rust Signature
+
+```rust
+pub async fn set_security_warning_acknowledged(
+    state: tauri::State<'_, AppState>,
+    acknowledged: bool,
+) -> Result<(), String>
+```
+
+<ParamField path="acknowledged" type="bool" required>
+  `true` to mark as acknowledged
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Acknowledge Warning
+import { invoke } from '@tauri-apps/api/core';
+
+const acknowledgeWarning = async () => {
+  await invoke('set_security_warning_acknowledged', { acknowledged: true });
+};
+```
+
+```typescript Warning Dialog
+const showSecurityWarning = async () => {
+  const userAccepted = confirm(
+    'Warning: Only install mods from trusted sources. Malicious mods can harm your system.'
+  );
+  
+  if (userAccepted) {
+    await invoke('set_security_warning_acknowledged', { acknowledged: true });
+    return true;
+  }
+  
+  return false;
+};
+```
+</CodeGroup>
+
+<Warning>
+  The security warning should be shown on first launch to inform users about mod safety.
+</Warning>

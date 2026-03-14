@@ -1,0 +1,279 @@
+---
+title: Architecture Overview
+description: Understanding the technical architecture of Balatro Mod Manager
+---
+
+## Project Overview
+
+Balatro Mod Manager is a standalone desktop application for managing mods for the game Balatro. Built with Tauri 2, it combines a Rust backend with a SvelteKit frontend to provide a native cross-platform experience.
+
+## Tech Stack
+
+<CardGroup cols={2}>
+  <Card title="Backend" icon="gear">
+    - **Framework**: Tauri 2.9+
+    - **Language**: Rust
+    - **Database**: SQLite (via rusqlite, bundled)
+    - **Build**: Cargo
+  </Card>
+  <Card title="Frontend" icon="window">
+    - **Framework**: SvelteKit 2 + Svelte 5
+    - **Language**: TypeScript
+    - **Package Manager**: Bun
+    - **Build**: Vite
+  </Card>
+</CardGroup>
+
+<Info>
+  **Supported Platforms**: Windows (x64), macOS (universal binary), Linux (Flatpak, AppImage, Deb, RPM)
+</Info>
+
+## Crate Structure
+
+The project uses a **workspace structure** with two Rust crates defined in the root `Cargo.toml`:
+
+### 1. Main Binary: `balatro-mod-manager` (`src-tauri/`)
+
+The Tauri application entry point that:
+- Exposes Tauri commands to the frontend
+- Manages application state, window lifecycle, and plugins
+- Contains organized command handlers in `commands/` module
+- Registers all IPC commands via `invoke_handler!` macro in `lib.rs`
+
+**Key Files**:
+- `src-tauri/src/lib.rs` - Application entry and command registration
+- `src-tauri/src/commands/` - Domain-organized command modules
+
+### 2. Core Library: `bmm-lib` (`src-tauri/bmm-lib/`)
+
+Platform-agnostic business logic library containing:
+
+<Steps>
+  <Step title="Core Modules">
+    - `database.rs` - SQLite schema, migrations, CRUD operations
+    - `finder.rs` - Detects Balatro installation paths (Steam, custom, Linux prefix)
+    - `installer.rs` - Mod installation/uninstallation logic
+  </Step>
+  <Step title="Mod Loaders">
+    - `lovely.rs` - Lovely mod loader installer and version management
+    - `balamod.rs` - Balamod alternative mod loader support
+    - `smods_installer.rs` - Steamodded/Talisman installer
+  </Step>
+  <Step title="Features">
+    - `local_mod_detection.rs` - Scans Mods folder, detects untracked mods
+    - `discord_rpc.rs` - Discord Rich Presence integration
+    - `mod_collections.rs` - Curated mod collection support
+    - `cache.rs` - Binary cache for remote mod index
+    - `logging.rs` - Centralized logging setup
+  </Step>
+</Steps>
+
+This library is used by the main Tauri app but can be tested independently.
+
+## Frontend Architecture
+
+### SvelteKit SSG (Static Site Generation)
+
+<Note>
+  The app uses `adapter-static` for prerendering with no server-side runtime. All routes are prerendered at build time.
+</Note>
+
+**Routes**:
+- `/` - Setup/picker screen
+- `/main` - Main application view
+
+All routes must be listed in `svelte.config.js` `prerender.entries` to avoid navigation issues in production builds.
+
+### State Management
+
+Svelte stores located in `src/stores/`:
+
+| Store | Purpose |
+|-------|--------|
+| `modStore.ts` | Mod catalog, install states, pagination, uninstall dialogs |
+| `collections.ts` | Mod collections (curated sets) |
+| `descriptions.ts` | Mod descriptions cache |
+| `modCache.ts` | Mod image/thumbnail cache |
+| `ui.ts` | UI state (sidebar, view modes, settings) |
+| `update.ts` | App update notifications |
+| `backups.ts` | Backup management state |
+| `network.ts` | Network status tracking |
+| `popupManager.ts` | Modal and popup state management |
+
+**Persistence**: LocalStorage is used for mod catalog, thumbnails, and settings.
+
+### Key Frontend Patterns
+
+<Steps>
+  <Step title="Component Organization">
+    Components are organized in `src/components/` with view-specific components in `src/components/viewblock/`
+  </Step>
+  <Step title="Type-Safe Backend Calls">
+    Tauri invoke wrapper in `src/utils/tauriInvoke.ts` provides type-safe backend calls
+  </Step>
+  <Step title="Image Caching">
+    Image caching system in `src/utils/image-cache.ts` with background thumbnail queue processing
+  </Step>
+</Steps>
+
+## Backend Architecture
+
+### Tauri Commands (`src-tauri/src/commands/`)
+
+Commands are organized by domain:
+
+<CardGroup cols={3}>
+  <Card title="Core Operations">
+    - `paths` - Path resolution
+    - `install` - Mod installation
+    - `system` - System info
+    - `init` - Initialization
+  </Card>
+  <Card title="Mod Management">
+    - `mods` - Mod operations
+    - `detection` - Mod detection
+    - `lovely` - Lovely loader
+    - `repo` - Repository sync
+  </Card>
+  <Card title="Utilities">
+    - `cache` - Cache management
+    - `settings` - Settings CRUD
+    - `thumbnails` - Image cache
+    - `import` - Data import
+    - `external` - External tools
+    - `report` - Error reporting
+    - `backup` - Backup/restore
+    - `health` - Health checks
+    - `analytics` - Usage analytics
+  </Card>
+</CardGroup>
+
+All commands are registered in `src-tauri/src/lib.rs` via the `invoke_handler!` macro.
+
+### Database Schema
+
+<Info>
+  SQLite database is stored in the app data directory with the following tables:
+</Info>
+
+- `mods` - Installed mods metadata
+- `settings` - Key-value configuration
+- `mod_collections` - Curated mod collections
+- `lovely_versions` - Lovely loader versions
+
+Migrations are handled in `database.rs` with versioned schema updates.
+
+### Background Tasks
+
+<Steps>
+  <Step title="Auto-Reindex Loop">
+    Periodically validates installed mods, detects folder changes, and emits `installed-mods-changed` events
+  </Step>
+  <Step title="Thumbnail Queue">
+    Background downloads and caching of mod images for improved performance
+  </Step>
+</Steps>
+
+## Platform-Specific Implementation
+
+### macOS
+
+<Warning>
+  Universal binaries require both `aarch64-apple-darwin` and `x86_64-apple-darwin` targets installed.
+</Warning>
+
+- Minimum deployment target: macOS 11.0 (Big Sur)
+- Universal binaries combine ARM64 and x86_64 architectures
+- Code signing via SignPath for production releases
+
+### Linux
+
+- **Recommended distribution**: Flatpak
+- **Requirements**: 
+  - `flatpak-builder` and runtimes
+  - GNOME 47 platform
+  - Node 20 and Rust stable extensions
+- **Steam detection**: Via Flatpak or native paths
+- **Display server**: Defaults to X11 (XWayland) for compatibility
+  - Set `BMM_ALLOW_WAYLAND=1` to use native Wayland
+
+<Note>
+  Flatpak builds run in a sandbox with limited file access to XDG directories and Steam paths.
+</Note>
+
+### Windows
+
+- Target: `x86_64-pc-windows-msvc`
+- Code signing via SignPath for production releases
+- Installer formats: EXE and MSI
+
+<Warning>
+  **Xbox Game Pass Incompatibility**: Balatro Mod Manager does not support the Xbox Game Pass version of Balatro.
+</Warning>
+
+## Key Workflows
+
+### Adding a New Tauri Command
+
+<Steps>
+  <Step title="Create Command Function">
+    Add command function to appropriate module in `src-tauri/src/commands/` (e.g., `install.rs`)
+  </Step>
+  <Step title="Register Command">
+    Register command in `src-tauri/src/lib.rs` in the `invoke_handler!` macro
+  </Step>
+  <Step title="Frontend Integration">
+    Call from frontend using `invoke()` from `@tauri-apps/api/core` or the wrapper in `src/utils/tauriInvoke.ts`
+  </Step>
+</Steps>
+
+### Modifying the Database Schema
+
+<Steps>
+  <Step title="Update Schema">
+    Update schema definition in `src-tauri/bmm-lib/src/database.rs`
+  </Step>
+  <Step title="Add Migration">
+    Add migration logic in `Database::new()` or dedicated migration function
+  </Step>
+  <Step title="Version Bump">
+    Bump schema version if necessary for backwards compatibility
+  </Step>
+  <Step title="Test">
+    Test with `cargo test -p bmm-lib -- --test-threads=1`
+  </Step>
+</Steps>
+
+### Adding Frontend State
+
+<Steps>
+  <Step title="Define Store">
+    Create store in `src/stores/` using `writable()` from `svelte/store`
+  </Step>
+  <Step title="Add Persistence">
+    Implement localStorage persistence logic if needed (see pattern in `modStore.ts`)
+  </Step>
+  <Step title="Use in Components">
+    Import and use in components via `$storeName` syntax
+  </Step>
+</Steps>
+
+## Important Constraints
+
+<Warning>
+  **Single-threaded tests**: Database tests must use `--test-threads=1` to avoid SQLite lock conflicts.
+</Warning>
+
+<Info>
+  **Additional constraints**:
+  - No Xbox Game Pass support for Balatro
+  - Flatpak sandbox limits file access on Linux
+  - All SvelteKit routes must be prerendered at build time
+</Info>
+
+## External Integrations
+
+- **Mod Index**: Fetches mod catalog from remote repository in binary cache format
+- **Discord RPC**: Optional Discord Rich Presence (configurable in settings)
+- **Steam**: Detects Steam library folders via `libraryfolders.vdf` parsing
+- **Lovely**: Mod loader injector (bundled/downloaded as needed)

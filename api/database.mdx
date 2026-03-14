@@ -1,0 +1,408 @@
+---
+title: 'Database'
+description: 'SQLite database for storing app settings and installed mod metadata'
+---
+
+The `Database` module provides persistent storage for the mod manager using SQLite with automatic schema migrations. It handles installed mod tracking, user settings, and installation paths.
+
+## Database Struct
+
+Handle to the SQLite database storing app settings and mod metadata. All database operations are synchronous.
+
+```rust
+pub struct Database {
+    conn: Connection,
+}
+```
+
+<Note>
+For async contexts, wrap database access in a `tokio::Mutex` or similar synchronization primitive.
+</Note>
+
+## Schema
+
+The database consists of two main tables:
+
+### settings Table
+
+```sql
+CREATE TABLE settings (
+    setting TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+)
+```
+
+Stores configuration values:
+- `db_version` - Current schema version (e.g., "1.2")
+- `installation_path` - Custom Balatro installation path
+- `lovely_version` - Installed Lovely injector version
+- `discord_rpc` - Discord RPC enabled/disabled status
+- `lovely_console` - Console visibility preference
+- `launch_mode` - "modded" or "vanilla"
+- `analytics_enabled` - Telemetry opt-in/out
+- `linux_prefix` - Wine/Proton prefix path
+- `security_warning_acknowledged` - Security warning acceptance
+
+### installed_mods Table
+
+```sql
+CREATE TABLE installed_mods (
+    name TEXT PRIMARY KEY,
+    path TEXT NOT NULL,
+    dependencies TEXT NOT NULL DEFAULT '[]',
+    current_version TEXT
+)
+```
+
+With indices on `name` and `path` for efficient lookups.
+
+## InstalledMod Struct
+
+Represents an installed mod stored in the database.
+
+```rust
+pub struct InstalledMod {
+    /// The display name of the mod.
+    pub name: String,
+    /// Filesystem path where the mod is installed.
+    pub path: String,
+    /// List of dependency mod names.
+    pub dependencies: Vec<String>,
+    /// Currently installed version string, if known.
+    pub current_version: Option<String>,
+}
+```
+
+## Core Methods
+
+### new()
+
+Creates a new Database instance, opening or creating the SQLite file.
+
+```rust
+pub fn new() -> Result<Self, AppError>
+```
+
+<ParamField path="Returns" type="Result<Database, AppError>">
+  A new database handle with automatic schema migrations applied
+</ParamField>
+
+**Location**: Platform config directory under `Balatro/bmm_storage.db`
+
+**Errors**:
+- Config directory not found
+- Database cannot be opened
+- Migration failures
+
+**Example**:
+
+```rust
+use bmm_lib::database::Database;
+
+let db = Database::new()?;
+```
+
+<Note>
+The database uses WAL (Write-Ahead Logging) mode for better concurrent performance and crash recovery.
+</Note>
+
+### checkpoint()
+
+Force a WAL checkpoint to merge the WAL file into the main database.
+
+```rust
+pub fn checkpoint(&self) -> Result<(), AppError>
+```
+
+<Warning>
+Call this on app shutdown for a cleaner database state.
+</Warning>
+
+## Mod Management
+
+### get_installed_mods()
+
+Retrieves all installed mods from the database.
+
+```rust
+pub fn get_installed_mods(&self) -> Result<Vec<InstalledMod>, AppError>
+```
+
+<ResponseField name="Returns" type="Vec<InstalledMod>">
+  List of all installed mods with their metadata
+</ResponseField>
+
+**Example**:
+
+```rust
+let mods = db.get_installed_mods()?;
+for mod_info in mods {
+    println!("{}: {:?}", mod_info.name, mod_info.current_version);
+}
+```
+
+### add_installed_mod()
+
+Adds or updates an installed mod in the database.
+
+```rust
+pub fn add_installed_mod(
+    &self,
+    name: &str,
+    path: &str,
+    dependencies: &[String],
+    current_version: Option<String>,
+) -> Result<(), AppError>
+```
+
+<ParamField path="name" type="&str" required>
+  The mod's display name (used as primary key)
+</ParamField>
+
+<ParamField path="path" type="&str" required>
+  Filesystem path where the mod is installed
+</ParamField>
+
+<ParamField path="dependencies" type="&[String]" required>
+  List of dependency mod names
+</ParamField>
+
+<ParamField path="current_version" type="Option<String>">
+  Version string of the installed mod
+</ParamField>
+
+**Behavior**: Uses `INSERT OR REPLACE` - will update existing mods with the same name.
+
+**Example**:
+
+```rust
+db.add_installed_mod(
+    "Talisman",
+    "/path/to/Mods/Talisman",
+    &["Steamodded".to_string()],
+    Some("2.0.1".to_string()),
+)?;
+```
+
+### get_mod_details()
+
+Retrieves detailed information about a specific mod.
+
+```rust
+pub fn get_mod_details(&self, mod_name: &str) -> Result<InstalledMod, AppError>
+```
+
+<ParamField path="mod_name" type="&str" required>
+  The name of the mod to look up
+</ParamField>
+
+**Errors**: Returns `AppError::InvalidState` if mod not found.
+
+### remove_installed_mod()
+
+Removes a mod from the database by name.
+
+```rust
+pub fn remove_installed_mod(&self, name: &str) -> Result<(), AppError>
+```
+
+<Note>
+This only removes the database entry - it does not delete mod files from disk.
+</Note>
+
+### get_dependents()
+
+Finds all mods that depend on the specified mod.
+
+```rust
+pub fn get_dependents(&self, mod_name: &str) -> Result<Vec<String>, AppError>
+```
+
+<ParamField path="mod_name" type="&str" required>
+  The mod name to check for dependents
+</ParamField>
+
+<ResponseField name="Returns" type="Vec<String>">
+  List of mod names that depend on this mod
+</ResponseField>
+
+**Example**:
+
+```rust
+let dependents = db.get_dependents("Steamodded")?;
+if !dependents.is_empty() {
+    println!("Cannot uninstall - required by: {:?}", dependents);
+}
+```
+
+### get_dependents_batch()
+
+Batch query for dependents of multiple mods (more efficient than individual calls).
+
+```rust
+pub fn get_dependents_batch(
+    &self,
+    mod_names: &[&str],
+) -> Result<std::collections::HashMap<String, Vec<String>>, AppError>
+```
+
+<ParamField path="mod_names" type="&[&str]" required>
+  List of mod names to check
+</ParamField>
+
+<ResponseField name="Returns" type="HashMap<String, Vec<String>>">
+  Map of mod name to list of dependent mod names
+</ResponseField>
+
+## Settings Management
+
+### get_installation_path() / set_installation_path()
+
+Manage the custom Balatro installation path.
+
+```rust
+pub fn get_installation_path(&self) -> Result<Option<String>, AppError>
+pub fn set_installation_path(&self, path: &str) -> Result<(), AppError>
+pub fn remove_installation_path(&self) -> Result<(), AppError>
+```
+
+### get_lovely_version() / set_lovely_version()
+
+Track the installed Lovely injector version.
+
+```rust
+pub fn get_lovely_version(&self) -> Result<Option<String>, AppError>
+pub fn set_lovely_version(&self, version: &str) -> Result<(), AppError>
+```
+
+### Discord RPC Settings
+
+Manage Discord Rich Presence integration.
+
+```rust
+pub fn is_discord_rpc_enabled(&self) -> Result<bool, AppError>
+pub fn set_discord_rpc_enabled(&self, enabled: bool) -> Result<(), AppError>
+```
+
+**Default**: Enabled (true)
+
+### Lovely Console Settings
+
+Control Lovely console visibility.
+
+```rust
+pub fn is_lovely_console_enabled(&self) -> Result<bool, AppError>
+pub fn set_lovely_console_status(&self, enabled: bool) -> Result<(), AppError>
+```
+
+**Default**: Disabled (false)
+
+### Launch Mode
+
+Manage modded vs vanilla launch preference.
+
+```rust
+pub fn get_launch_mode(&self) -> Result<String, AppError>
+pub fn set_launch_mode(&self, mode: &str) -> Result<(), AppError>
+```
+
+<ParamField path="mode" type="&str" required>
+  Either "modded" or "vanilla"
+</ParamField>
+
+**Default**: "modded"
+
+### Analytics Settings
+
+Manage telemetry opt-in/out (opt-out model).
+
+```rust
+pub fn is_analytics_enabled(&self) -> Result<bool, AppError>
+pub fn set_analytics_enabled(&self, enabled: bool) -> Result<(), AppError>
+```
+
+**Default**: Enabled (true) - opt-out model
+
+### Linux Prefix Path
+
+Store Wine/Proton prefix path for Linux installations.
+
+```rust
+pub fn get_linux_prefix(&self) -> Result<Option<String>, AppError>
+pub fn set_linux_prefix(&self, value: &str) -> Result<(), AppError>
+```
+
+## Version Management
+
+### get_last_installed_version() / set_last_installed_version()
+
+Track installed version for a specific mod.
+
+```rust
+pub fn get_last_installed_version(&self, mod_name: &str) -> Result<String, AppError>
+pub fn set_last_installed_version(&self, mod_name: &str, version: &str) -> Result<(), AppError>
+```
+
+## Database Internals
+
+<Expandable title="Schema Migrations">
+
+The database uses automatic schema migrations with version tracking:
+
+1. Current version is stored in `settings.db_version`
+2. `CURRENT_DB_VERSION` constant defines the target schema
+3. On mismatch, migration creates a new database and copies data
+4. Old database is backed up to `.db.bak` before migration
+5. Retry logic handles locked databases (3 attempts with 500ms delays)
+
+**Migration Process** (database.rs:231-309):
+```rust
+fn migrate_database(db_path: &PathBuf) -> Result<(), AppError>
+```
+
+1. Create `bmm_storage_new.db` with current schema
+2. Copy settings and installed_mods from old DB
+3. Backup old DB to `.db.bak`
+4. Rename new DB to `bmm_storage.db`
+
+</Expandable>
+
+<Expandable title="Performance Optimizations">
+
+- **WAL Mode**: Better concurrent read performance and crash recovery
+- **Prepared Statement Caching**: Frequently-used queries use `prepare_cached()`
+- **Batch Operations**: `get_dependents_batch()` reduces query overhead
+- **Indices**: Path and name indices on `installed_mods` table
+
+**Configuration** (database.rs:147-156):
+```rust
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+PRAGMA wal_autocheckpoint=500;
+PRAGMA busy_timeout=5000;
+```
+
+</Expandable>
+
+## Error Handling
+
+All methods return `Result<T, AppError>` with these common errors:
+
+- `AppError::DatabaseInit` - Database creation or connection failure
+- `AppError::DirNotFound` - Config directory not accessible
+- `AppError::InvalidState` - Logical inconsistency (e.g., mod not found)
+
+Database operations use SQLite's built-in retry mechanisms with 5-second busy timeouts.
+
+## Storage Location
+
+Database file location varies by platform:
+
+- **Windows**: `%APPDATA%\Balatro\bmm_storage.db`
+- **macOS**: `~/Library/Application Support/Balatro/bmm_storage.db`
+- **Linux**: `~/.config/Balatro/bmm_storage.db`
+- **Flatpak**: `~/.var/app/io.balatro.ModManager/config/Balatro/bmm_storage.db`
+
+<Note>
+The Flatpak database is automatically detected and used if present.
+</Note>

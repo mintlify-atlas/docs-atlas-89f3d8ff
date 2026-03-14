@@ -1,122 +1,133 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Balatro Mod Manager",
+  "theme": "almond",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#fa9323",
+    "light": "#3f6c81",
+    "dark": "#b3b2b2"
   },
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "https://media.brand.dev/a7eb4185-d9fc-42ca-8f6d-7e634c3b0de7.svg",
+    "dark": "https://media.brand.dev/0694e5a7-99b8-4b1e-acd6-574670e1b905.png"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/skyline69/balatro-mod-manager"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/skyline69/balatro-mod-manager"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Get Started",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Overview",
             "pages": [
-              "index",
+              "introduction",
+              "installation"
+            ]
+          },
+          {
+            "group": "Quick Start",
+            "pages": [
               "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "first-mod"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "User Guide",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core Features",
             "pages": [
-              "api-reference/introduction"
+              "guide/browsing-mods",
+              "guide/installing-mods",
+              "guide/managing-mods",
+              "guide/mod-collections"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Advanced Features",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "guide/backups",
+              "guide/lovely-injector",
+              "guide/launch-modes",
+              "guide/local-mods"
+            ]
+          },
+          {
+            "group": "Settings",
+            "pages": [
+              "guide/settings",
+              "guide/discord-integration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Advanced",
+        "groups": [
+          {
+            "group": "Platform Support",
+            "pages": [
+              "platform/windows",
+              "platform/macos",
+              "platform/linux",
+              "platform/steam-deck"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/common-issues",
+              "troubleshooting/logs",
+              "troubleshooting/reporting-bugs"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "dev/architecture",
+              "dev/building",
+              "dev/contributing",
+              "dev/testing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Library",
+            "pages": [
+              "api/database",
+              "api/installer",
+              "api/finder",
+              "api/lovely"
+            ]
+          },
+          {
+            "group": "Tauri Commands",
+            "pages": [
+              "api/commands/install",
+              "api/commands/paths",
+              "api/commands/settings",
+              "api/commands/mods"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

@@ -1,0 +1,432 @@
+---
+title: "macOS Installation"
+description: "Complete guide to installing and configuring Balatro Mod Manager on macOS"
+---
+
+## System Requirements
+
+- **OS**: macOS 11.0 (Big Sur) or later
+- **Architecture**: Universal Binary (Apple Silicon M1/M2/M3 and Intel x86_64)
+- **Balatro Version**: Steam version only
+- **Deployment Target**: `MACOSX_DEPLOYMENT_TARGET=11.0`
+
+<Info>
+  Balatro Mod Manager ships as a **universal binary** that runs natively on both Apple Silicon and Intel Macs.
+</Info>
+
+## Installation
+
+<Steps>
+  <Step title="Download the DMG">
+    Visit the [latest release page](https://github.com/skyline69/balatro-mod-manager/releases/latest) and download:
+
+    ```
+    Balatro.Mod.Manager_..._universal.dmg
+    ```
+
+    This single file works on both Apple Silicon (M1/M2/M3) and Intel processors.
+  </Step>
+
+  <Step title="Mount and Install">
+    1. Double-click the downloaded `.dmg` file to mount it
+    2. Drag `Balatro Mod Manager.app` to your Applications folder
+    3. Eject the disk image
+  </Step>
+
+  <Step title="First Launch (Gatekeeper)">
+    macOS Gatekeeper may block the app on first launch since it's not App Store distributed.
+
+    <Warning>
+      You will likely see: **"Balatro Mod Manager" cannot be opened because the developer cannot be verified.**
+    </Warning>
+
+    To allow the app:
+    1. Go to **System Settings** → **Privacy & Security**
+    2. Scroll to the Security section
+    3. Click **"Open Anyway"** next to the Balatro Mod Manager message
+    4. Confirm by clicking **"Open"**
+
+    Alternatively, right-click the app and select **Open**, then click **Open** in the dialog.
+  </Step>
+
+  <Step title="Launch the Application">
+    After granting permission, launch Balatro Mod Manager from:
+    - **Applications folder**
+    - **Spotlight** (Cmd + Space, type "Balatro")
+    - **Launchpad**
+  </Step>
+</Steps>
+
+## Code Signing
+
+<Note>
+  Public releases of Balatro Mod Manager are **code-signed** using [SignPath](https://signpath.io) to ensure authenticity and security.
+</Note>
+
+To verify the signature:
+
+```bash
+codesign -dvv "/Applications/Balatro Mod Manager.app"
+spctl -a -vv "/Applications/Balatro Mod Manager.app"
+```
+
+## File Locations
+
+### Balatro Installation Detection
+
+The mod manager automatically detects Balatro at:
+
+```bash
+~/Library/Application Support/Steam/steamapps/common/Balatro
+```
+
+If Steam is installed in a custom location, set the path manually in Settings.
+
+### Application Data Directories
+
+| Data Type | Location |
+|-----------|----------|
+| **Configuration** | `~/Library/Application Support/Balatro/` |
+| **Mods** | `~/Library/Application Support/Balatro/Mods/` |
+| **Mod Manager Database** | `~/Library/Application Support/balatro-mod-manager/` |
+| **Logs** | `~/Library/Application Support/balatro-mod-manager/logs/` |
+| **Cache** | `~/Library/Caches/balatro-mod-manager/` |
+
+<Tip>
+  Use **Finder** → **Go** → **Go to Folder...** (Cmd + Shift + G) and paste these paths to quickly access them.
+</Tip>
+
+To list all mod manager files:
+
+```bash
+ls -la ~/Library/Application\ Support/balatro-mod-manager/
+```
+
+## Building from Source
+
+### Prerequisites
+
+Install the required tools:
+
+<CodeGroup>
+```bash Homebrew (Recommended)
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install Task
+brew install go-task
+
+# Install Tauri CLI
+cargo install tauri-cli --version "^2.9"
+
+# Add Rust targets for universal binary
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+```
+
+```bash Manual
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install Task (download from https://taskfile.dev/installation/)
+curl -sL https://taskfile.dev/install.sh | sh
+
+# Install Tauri CLI
+cargo install tauri-cli --version "^2.9"
+
+# Add Rust targets
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+```
+</CodeGroup>
+
+### Automated Build
+
+Run the installation script:
+
+```bash
+curl -sL https://raw.githubusercontent.com/skyline69/balatro-mod-manager/main/scripts/install.sh | bash
+```
+
+The script will:
+- Clone the repository
+- Install dependencies
+- Build the universal binary
+- Create the `.dmg` in `src-tauri/target/universal-apple-darwin/release/bundle/dmg/`
+
+### Manual Build
+
+<Steps>
+  <Step title="Clone Repository">
+    ```bash
+    git clone https://github.com/skyline69/balatro-mod-manager.git
+    cd balatro-mod-manager
+    bun install --allow-scripts
+    ```
+  </Step>
+
+  <Step title="Build Universal Binary (Default)">
+    ```bash
+    task release-macos
+    ```
+
+    This builds for both architectures and creates a universal binary.
+
+    <Info>
+      **Architecture-Specific Builds**:
+      - Apple Silicon only: `task release-macos ARCH=arm64`
+      - Intel only: `task release-macos ARCH=x86_64`
+    </Info>
+  </Step>
+
+  <Step title="Locate Build Artifacts">
+    Universal binary:
+    ```bash
+    src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+    src-tauri/target/universal-apple-darwin/release/bundle/macos/Balatro\ Mod\ Manager.app
+    ```
+
+    Architecture-specific builds:
+    ```bash
+    # Apple Silicon
+    src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+
+    # Intel
+    src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+    ```
+  </Step>
+</Steps>
+
+### Signed Production Build
+
+<Warning>
+  Code signing requires an Apple Developer account and a signing identity. This is typically only needed for distribution.
+</Warning>
+
+To create a signed build:
+
+```bash
+export APPLE_SIGNING_IDENTITY="Your Developer ID Application"
+task release-macos-production
+```
+
+The signing identity is configured in `Taskfile.yml` but requires environment setup. **Never commit signing credentials to the repository.**
+
+## Troubleshooting
+
+### "App is Damaged" Error
+
+**Issue**: macOS shows "Balatro Mod Manager.app is damaged and can't be opened"
+
+**Solution**:
+
+This usually means Gatekeeper quarantine attributes are blocking the app.
+
+```bash
+xattr -d com.apple.quarantine "/Applications/Balatro Mod Manager.app"
+```
+
+Then try launching again.
+
+### Gatekeeper Blocks App
+
+**Issue**: "cannot be opened because the developer cannot be verified"
+
+**Solution**:
+
+1. **Recommended**: System Settings → Privacy & Security → "Open Anyway"
+
+2. **Alternative**: Remove quarantine entirely:
+   ```bash
+   xattr -cr "/Applications/Balatro Mod Manager.app"
+   ```
+
+3. **Override Gatekeeper** (not recommended for untrusted apps):
+   ```bash
+   sudo spctl --master-disable
+   ```
+   Re-enable after installation:
+   ```bash
+   sudo spctl --master-enable
+   ```
+
+### Steam Not Detected
+
+**Issue**: Balatro installation path not found
+
+**Solution**:
+
+1. Verify Steam is installed:
+   ```bash
+   ls -la ~/Library/Application\ Support/Steam/steamapps/common/Balatro
+   ```
+
+2. If Balatro is in a custom location, set it manually:
+   - Open Balatro Mod Manager
+   - Settings → Installation Path
+   - Browse to the folder containing `Balatro.app`
+
+3. Check permissions:
+   ```bash
+   ls -la ~/Library/Application\ Support/Steam/
+   ```
+
+### App Won't Launch (Crashes Immediately)
+
+**Issue**: App opens briefly then closes, or doesn't appear at all
+
+**Solution**:
+
+1. Check Console logs:
+   - Open **Console.app** (Applications → Utilities)
+   - Search for "Balatro Mod Manager" or "BMM"
+   - Look for crash reports or error messages
+
+2. Run from Terminal to see output:
+   ```bash
+   open -a "Balatro Mod Manager"
+   # Or directly:
+   "/Applications/Balatro Mod Manager.app/Contents/MacOS/Balatro Mod Manager"
+   ```
+
+3. Check crash reports:
+   ```bash
+   open ~/Library/Logs/DiagnosticReports/
+   ```
+   Look for files starting with "Balatro Mod Manager"
+
+4. Reset application preferences:
+   ```bash
+   rm -rf ~/Library/Application\ Support/balatro-mod-manager/
+   rm -rf ~/Library/Caches/balatro-mod-manager/
+   ```
+
+### Universal Binary Issues
+
+**Issue**: App runs under Rosetta on Apple Silicon instead of natively
+
+**Solution**:
+
+Verify the binary is universal:
+
+```bash
+file "/Applications/Balatro Mod Manager.app/Contents/MacOS/Balatro Mod Manager"
+```
+
+Should show:
+```
+Mach-O universal binary with 2 architectures:
+- x86_64
+- arm64
+```
+
+Force native execution:
+```bash
+arch -arm64 open -a "Balatro Mod Manager"
+```
+
+### Database Permission Errors
+
+**Issue**: "Failed to open database" or permission denied errors
+
+**Solution**:
+
+1. Fix permissions:
+   ```bash
+   chmod -R u+rw ~/Library/Application\ Support/balatro-mod-manager/
+   ```
+
+2. Check ownership:
+   ```bash
+   ls -la ~/Library/Application\ Support/balatro-mod-manager/
+   ```
+
+3. If owned by root (incorrect), fix it:
+   ```bash
+   sudo chown -R $(whoami) ~/Library/Application\ Support/balatro-mod-manager/
+   ```
+
+### Performance Issues on Older Macs
+
+**Issue**: Sluggish UI, slow mod installation
+
+**Solution**:
+
+- **Disable animations**: System Settings → Accessibility → Display → Reduce Motion
+- **Clear cache**: Settings → Clear Cache in Balatro Mod Manager
+- **Reduce thumbnail quality**: Settings → Thumbnails → Lower Quality
+- **Close other apps** to free up memory
+
+## Advanced Configuration
+
+### Launch from Command Line
+
+```bash
+open -a "Balatro Mod Manager"
+
+# With specific file association
+open -a "Balatro Mod Manager" /path/to/mod.zip
+
+# Force architecture (Apple Silicon)
+arch -arm64 open -a "Balatro Mod Manager"
+
+# Force architecture (Intel/Rosetta)
+arch -x86_64 open -a "Balatro Mod Manager"
+```
+
+### Enable Debug Logging
+
+```bash
+export RUST_LOG=debug
+open -a "Balatro Mod Manager"
+```
+
+View logs:
+```bash
+tail -f ~/Library/Application\ Support/balatro-mod-manager/logs/*.log
+```
+
+### Custom Database Location
+
+Not officially supported, but you can symlink:
+
+```bash
+mv ~/Library/Application\ Support/balatro-mod-manager /path/to/custom/location
+ln -s /path/to/custom/location ~/Library/Application\ Support/balatro-mod-manager
+```
+
+## Uninstallation
+
+To completely remove Balatro Mod Manager:
+
+```bash
+# Remove application
+rm -rf "/Applications/Balatro Mod Manager.app"
+
+# Remove application data
+rm -rf ~/Library/Application\ Support/balatro-mod-manager
+rm -rf ~/Library/Caches/balatro-mod-manager
+rm -rf ~/Library/Logs/balatro-mod-manager
+
+# Remove installed mods (optional)
+rm -rf ~/Library/Application\ Support/Balatro/Mods
+```
+
+## Performance Tips
+
+- Run the native architecture build (check Activity Monitor → Architecture column)
+- Keep macOS updated for performance improvements
+- Ensure adequate free disk space (at least 2GB for cache and downloads)
+- Disable FileVault if experiencing slow disk I/O (not recommended for security)
+
+## See Also
+
+- [Getting Started](/quickstart)
+- [Installing Mods](/guide/installing-mods)
+- [Troubleshooting Guide](/troubleshooting/common-issues)
+- [Building from Source](/dev/building)

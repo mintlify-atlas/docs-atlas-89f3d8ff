@@ -1,0 +1,498 @@
+---
+title: 'Reporting Bugs'
+description: 'How to submit detailed bug reports to help improve Balatro Mod Manager'
+icon: 'bug'
+---
+
+## Before Reporting
+
+Before creating a new bug report, please:
+
+<Steps>
+  <Step title="Search existing issues">
+    Check if someone has already reported the same issue:
+
+    - [GitHub Issues](https://github.com/skyline69/balatro-mod-manager/issues)
+    - Search both open and closed issues
+    - Use keywords from your error message
+  </Step>
+
+  <Step title="Check troubleshooting docs">
+    Many common issues have documented solutions:
+
+    - [Common Issues](/troubleshooting/common-issues)
+    - [Logs & Debugging](/troubleshooting/logs)
+    - [GitHub Discussions](https://github.com/skyline69/balatro-mod-manager/discussions)
+  </Step>
+
+  <Step title="Verify it's a bug">
+    Make sure the issue is actually a bug:
+
+    - Does it happen consistently?
+    - Can you reproduce it reliably?
+    - Is it a feature request instead?
+  </Step>
+</Steps>
+
+<Info>
+  For **feature requests** or **questions**, use [GitHub Discussions](https://github.com/skyline69/balatro-mod-manager/discussions) instead of the issue tracker.
+</Info>
+
+## Where to Report
+
+<CardGroup cols={2}>
+  <Card title="Bug Reports" icon="bug" href="https://github.com/skyline69/balatro-mod-manager/issues/new">
+    **GitHub Issues** for confirmed bugs and problems
+  </Card>
+
+  <Card title="Questions & Discussions" icon="comments" href="https://github.com/skyline69/balatro-mod-manager/discussions">
+    **GitHub Discussions** for help, questions, and ideas
+  </Card>
+</CardGroup>
+
+## Creating a Bug Report
+
+### Required Information
+
+A good bug report includes:
+
+1. **Clear description** of what happened
+2. **Steps to reproduce** the issue
+3. **Expected vs. actual behavior**
+4. **Environment details** (OS, version, installation method)
+5. **Log excerpts** showing errors (see [Logs](/troubleshooting/logs))
+6. **Screenshots or videos** if UI-related
+
+### Bug Report Template
+
+Use this template when creating a new issue:
+
+````markdown
+### Description
+
+A clear and concise description of the bug.
+
+### Steps to Reproduce
+
+1. Open Balatro Mod Manager
+2. Click on "Install Mod"
+3. Select mod "Example Mod"
+4. Click "Install"
+5. Error appears: "Failed to install mod"
+
+### Expected Behavior
+
+The mod should install successfully and appear in the "Installed Mods" list.
+
+### Actual Behavior
+
+The installation fails with error: "Failed to install mod 'Example': download URL not reachable (HTTP 429)"
+
+### Environment
+
+- **OS:** Windows 11 / macOS 14.2 / Ubuntu 24.04
+- **BMM Version:** v1.2.3 (check About page or release tag)
+- **Installation Method:** Installer / Flatpak / AUR / Built from source
+- **Balatro Version:** 1.0.1f
+- **Balatro Source:** Steam / GOG / itch.io
+
+### Logs
+
+**Log file location:** `~/.config/Balatro/logs/bmm_2026-03-14_10-30-45.log`
+
+```log
+[2026-03-14 10:35:20] ERROR [bmm_lib::installer] Failed to install mod 'Example': Rate limit exceeded
+[2026-03-14 10:35:20] ERROR [bmm_lib::installer] Network error: HTTP 429 Too Many Requests
+```
+
+### Screenshots
+
+(If applicable, attach screenshots showing the error or unexpected behavior)
+
+### Additional Context
+
+- I tried installing 10 mods in quick succession before this error occurred
+- This is my first time using the mod manager
+- The mod installs fine when I wait 5 minutes and retry
+````
+
+## Environment Details
+
+### Finding Your BMM Version
+
+<Tabs>
+  <Tab title="From the App">
+    1. Open Balatro Mod Manager
+    2. Click **Settings** or **About**
+    3. Version number is displayed (e.g., `v1.2.3`)
+  </Tab>
+
+  <Tab title="From Filename">
+    The installer filename includes the version:
+
+    - `Balatro.Mod.Manager_1.2.3_x64-setup.exe` → **v1.2.3**
+    - `Balatro.Mod.Manager_1.2.3_universal.dmg` → **v1.2.3**
+  </Tab>
+
+  <Tab title="From Git">
+    If built from source:
+
+    ```bash
+    git describe --tags
+    # Output: v1.2.3 or v1.2.3-5-gabcdef (if commits ahead)
+    ```
+  </Tab>
+</Tabs>
+
+### OS & Platform Details
+
+**Include:**
+- Operating system name and version (e.g., Windows 11, macOS 14.2 Sonoma, Ubuntu 24.04)
+- Architecture (x64, ARM64, universal)
+- Desktop environment (Linux only: GNOME, KDE, etc.)
+- Display server (Linux only: X11, Wayland)
+
+**Examples:**
+- `Windows 11 23H2 (x64)`
+- `macOS 14.2 Sonoma (Apple Silicon M1)`
+- `Ubuntu 24.04 LTS (x64, GNOME on Wayland)`
+- `Arch Linux (x64, KDE Plasma on X11)`
+
+### Installation Method
+
+How you installed the mod manager matters for debugging:
+
+- **Windows:** `.exe` installer, `.msi` installer, or built from source
+- **macOS:** `.dmg` installer or built from source
+- **Linux:** Flatpak, AUR package, `.deb`, `.rpm`, AppImage, or built from source
+
+<Note>
+  **Flatpak and native installs** can behave differently due to sandboxing. Always mention if you're using Flatpak.
+</Note>
+
+## Collecting Logs
+
+Logs are **essential** for debugging issues. See [Logs & Debugging](/troubleshooting/logs) for full details.
+
+### Quick Guide
+
+<Steps>
+  <Step title="Find the logs directory">
+    **Windows:** `%APPDATA%\Balatro\logs\`
+
+    **macOS:** `~/Library/Application Support/Balatro/logs/`
+
+    **Linux:** `~/.config/Balatro/logs/`
+  </Step>
+
+  <Step title="Open the most recent log file">
+    Log files are named with timestamps: `bmm_YYYY-MM-DD_HH-MM-SS.log`
+
+    Find the one matching when the error occurred.
+  </Step>
+
+  <Step title="Search for ERROR or WARN">
+    Use your text editor's search function (Ctrl+F / Cmd+F) to find error messages.
+  </Step>
+
+  <Step title="Copy relevant lines">
+    Include 5-10 lines before and after the error for context.
+
+    **Sanitize paths** if they contain your username or sensitive info.
+  </Step>
+</Steps>
+
+### What to Include
+
+<AccordionGroup>
+  <Accordion title="For installation errors" icon="download">
+    Look for errors in the `bmm_lib::installer` module:
+
+    ```log
+    [ERROR] [bmm_lib::installer] Failed to install mod 'ModName': ...
+    [WARN]  [bmm_lib::installer] Mod install rate limited ...
+    ```
+
+    Include:
+    - The full error message
+    - Any retry attempts (WARN lines)
+    - The URL being downloaded (if shown)
+  </Accordion>
+
+  <Accordion title="For launch issues" icon="rocket">
+    Look for errors in launch commands:
+
+    ```log
+    [ERROR] [balatro_mod_manager::commands] Failed to launch ...
+    [INFO]  [balatro_mod_manager::commands] Launching Balatro via ...
+    ```
+
+    Include:
+    - Launch mode (modded vs vanilla)
+    - Platform-specific setup (e.g., Lovely injection, Linux prefix)
+    - The actual launch command being executed
+  </Accordion>
+
+  <Accordion title="For database errors" icon="database">
+    Look for errors in the `bmm_lib::database` module:
+
+    ```log
+    [ERROR] [bmm_lib::database] Database initialization failed: ...
+    [ERROR] [bmm_lib::database] Database error: UNIQUE constraint failed ...
+    ```
+
+    Include:
+    - Database initialization logs
+    - Any constraint or transaction errors
+    - Whether you have multiple mod manager instances running
+  </Accordion>
+
+  <Accordion title="For path detection issues" icon="folder">
+    Look for errors in the `bmm_lib::finder` module:
+
+    ```log
+    [ERROR] [bmm_lib::finder] Could not read steam install path ...
+    [DEBUG] [bmm_lib::finder] Returning 0 cached Balatro paths
+    ```
+
+    Include:
+    - Path detection attempts
+    - Steam library parsing results
+    - Custom path configuration (if any)
+  </Accordion>
+</AccordionGroup>
+
+### Linux-Specific Logs
+
+For Linux launch issues, also include the **prefix launch log**:
+
+```bash
+~/.config/Balatro/logs/prefix-launch.log
+```
+
+This captures Proton/Wine/Steam output that doesn't appear in the main log.
+
+## Screenshots & Videos
+
+Visual aids help a lot for UI bugs:
+
+### When to Include Screenshots
+
+- Error dialogs or messages
+- UI layout issues
+- Incorrect or missing information
+- Unexpected visual behavior
+
+### When to Include Videos
+
+- Steps to reproduce are complex
+- Issue is intermittent or timing-dependent
+- Animation or interaction bugs
+- Sequence of events leading to the error
+
+<Tip>
+  Use tools like [ShareX](https://getsharex.com/) (Windows), [Kap](https://getkap.co/) (macOS), or [Peek](https://github.com/phw/peek) (Linux) to easily capture screenshots and GIFs.
+</Tip>
+
+## Reproducing the Issue
+
+A reproducible bug is **much easier** to fix. Try to:
+
+### Isolate the Problem
+
+<Steps>
+  <Step title="Minimal setup">
+    Test with a fresh config or minimal mod list to rule out conflicts.
+  </Step>
+
+  <Step title="Consistent steps">
+    Document the exact sequence of actions that triggers the bug.
+  </Step>
+
+  <Step title="Fresh install (if needed)">
+    For critical bugs, test on a clean installation to confirm it's not local config.
+  </Step>
+</Steps>
+
+### Reproduction Rate
+
+Mention how often the bug occurs:
+
+- **Always** (100% of the time)
+- **Usually** (80-90% of the time)
+- **Sometimes** (50% of the time)
+- **Rarely** (< 20% of the time)
+- **Once** (can't reproduce)
+
+If it's intermittent, mention any patterns you've noticed (e.g., "only happens when network is slow" or "only on first launch after reboot").
+
+## Platform-Specific Issues
+
+### Windows-Specific
+
+**Include:**
+- Windows Defender or antivirus logs if mod manager was blocked
+- Registry export if related to Steam path detection issues
+- UAC (User Account Control) status
+- Whether running as administrator makes a difference
+
+### macOS-Specific
+
+**Include:**
+- Gatekeeper status (System Preferences → Security)
+- Full Disk Access permissions (for Terminal or mod manager)
+- Console.app crash logs if Balatro crashes on launch
+- System Integrity Protection (SIP) status if relevant
+
+### Linux-Specific
+
+**Include:**
+- Distribution and version (e.g., Ubuntu 24.04, Arch Linux, Fedora 40)
+- Flatpak version if using Flatpak build
+- Desktop environment and display server (GNOME/Wayland, KDE/X11, etc.)
+- Proton version if using Steam Play
+- Contents of Linux prefix command (if custom)
+- Environment variables if relevant (e.g., `BMM_LOVE_BIN`, `BMM_ALLOW_WAYLAND`)
+
+## Known Limitations
+
+Some issues are **not bugs** but known limitations:
+
+<Warning>
+  **These are NOT supported and should not be reported as bugs:**
+</Warning>
+
+### Xbox Game Pass Version
+
+The mod manager does **not support** the Xbox Game Pass version of Balatro due to UWP packaging restrictions.
+
+**Workaround:** Purchase Balatro on Steam, GOG, or itch.io instead.
+
+### Wayland Compositor Issues (Linux)
+
+The mod manager defaults to X11 (XWayland) on Linux because some Wayland compositors have protocol issues with the WebView.
+
+**Workaround:** Set `BMM_ALLOW_WAYLAND=1` to force Wayland, but expect potential rendering issues.
+
+### Flatpak Sandbox Restrictions
+
+Flatpak builds have limited access to the host filesystem and cannot launch non-Flatpak Steam by default.
+
+**Workaround:** Use `flatpak-spawn --host` in your Linux prefix command (handled automatically in most cases).
+
+## After Submitting
+
+### What Happens Next
+
+1. **Triage:** Maintainers will review your issue and may ask for more information
+2. **Labels:** Issue will be tagged (e.g., `bug`, `platform:linux`, `help wanted`)
+3. **Investigation:** Developers will attempt to reproduce and diagnose the issue
+4. **Fix:** If confirmed, the bug will be fixed in an upcoming release
+5. **Notification:** You'll be notified when the issue is resolved
+
+### You May Be Asked For
+
+- Additional logs or screenshots
+- Testing a debug build or patch
+- Trying a workaround
+- More details about your environment
+
+**Please respond promptly** to keep the issue active and prioritized.
+
+### Contributing a Fix
+
+If you're a developer and want to fix the bug yourself:
+
+1. Fork the repository
+2. Create a branch for your fix
+3. Write tests if applicable
+4. Submit a pull request referencing the issue
+
+See [CONTRIBUTING.md](https://github.com/skyline69/balatro-mod-manager/blob/main/CONTRIBUTING.md) for development guidelines.
+
+## Example Bug Reports
+
+### Good Example ✅
+
+```markdown
+### Description
+
+Mod manager crashes when trying to install "Example Mod" version 1.2.0.
+
+### Steps to Reproduce
+
+1. Open Balatro Mod Manager v1.2.3 on Windows 11
+2. Navigate to "Browse Mods"
+3. Search for "Example Mod"
+4. Click "Install" on version 1.2.0
+5. App crashes immediately
+
+### Expected Behavior
+
+Mod should install or show an error message without crashing.
+
+### Actual Behavior
+
+App closes with no error dialog. Event Viewer shows crash in tauri runtime.
+
+### Environment
+
+- OS: Windows 11 23H2 (x64)
+- BMM Version: v1.2.3 (installer)
+- Balatro: Steam version 1.0.1f
+- Antivirus: Windows Defender (no blocks)
+
+### Logs
+
+```log
+[2026-03-14 11:45:12] INFO  [bmm_lib::installer] Installing mod from URL: https://github.com/...
+[2026-03-14 11:45:13] DEBUG [bmm_lib::installer] Downloading archive...
+[2026-03-14 11:45:13] ERROR [bmm_lib::installer] Failed to parse archive: unexpected EOF
+```
+
+### Screenshots
+
+(Attached: error-dialog.png)
+
+### Additional Context
+
+Other mods install fine. Only this specific mod version causes the crash.
+Version 1.1.0 of the same mod installs without issues.
+```
+
+### Bad Example ❌
+
+```markdown
+Mod manager doesn't work. Fix it!
+```
+
+**What's wrong:**
+- No description of what "doesn't work" means
+- No steps to reproduce
+- No environment information
+- No logs or error messages
+- No context
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/skyline69/balatro-mod-manager/issues">
+    Browse existing bug reports and known issues
+  </Card>
+
+  <Card title="GitHub Discussions" icon="comments" href="https://github.com/skyline69/balatro-mod-manager/discussions">
+    Ask questions and discuss features
+  </Card>
+
+  <Card title="Logs & Debugging" icon="file-lines" href="/troubleshooting/logs">
+    Learn how to find and read log files
+  </Card>
+
+  <Card title="Common Issues" icon="triangle-exclamation" href="/troubleshooting/common-issues">
+    Check if your issue has a known solution
+  </Card>
+</CardGroup>
+
+## Thank You!
+
+Detailed bug reports help make Balatro Mod Manager better for everyone. Your time and effort in documenting issues is greatly appreciated! 🙏

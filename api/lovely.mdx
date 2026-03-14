@@ -1,0 +1,571 @@
+---
+title: 'Lovely'
+description: 'Lovely mod loader/injector installation and version management'
+---
+
+The `Lovely` module handles downloading, installing, and managing the Lovely injector framework that enables Balatro mods to work. It provides platform-specific installation, version checking, and injector enable/disable functionality.
+
+## Overview
+
+Lovely is the mod injection framework required for Balatro mods. This module provides:
+
+- **Installation**: Downloads and installs platform-specific Lovely binaries
+- **Version Management**: Checks for updates with 24-hour caching
+- **Toggle Control**: Enable/disable injector without uninstalling
+- **Platform Support**: Windows DLL, macOS dylib, Linux .so
+
+## Platform-Specific Details
+
+<ParamField path="Windows/Proton" type="version.dll">
+  Uses DLL injection via `version.dll` proxy
+</ParamField>
+
+<ParamField path="macOS" type="liblovely.dylib">
+  Uses `DYLD_INSERT_LIBRARIES` environment variable
+</ParamField>
+
+<ParamField path="Linux (native)" type="liblovely.so">
+  Uses `LD_PRELOAD` environment variable
+</ParamField>
+
+## Core Functions
+
+### ensure_lovely_exists()
+
+Ensures Lovely injector is installed and returns the path to the executable/library.
+
+```rust
+pub async fn ensure_lovely_exists() -> Result<PathBuf, AppError>
+```
+
+<ResponseField name="Returns" type="PathBuf">
+  Path to the Lovely library or game executable
+</ResponseField>
+
+**Platform Behavior**:
+
+**macOS** (lovely.rs:202-220):
+```rust
+let bins_dir = config_dir.join("Balatro/bins");
+let lovely_path = bins_dir.join("liblovely.dylib");
+if !lovely_path.exists() {
+    download_and_install_lovely(&lovely_path).await?;
+}
+Ok(lovely_path)
+```
+
+**Windows/Linux** (lovely.rs:222-248):
+```rust
+let game_path = &get_balatro_paths_cached()[0];
+ensure_version_dll_exists(game_path).await?;
+Ok(game_path.join("Balatro.exe"))
+```
+
+**Example**:
+
+```rust
+use bmm_lib::lovely::ensure_lovely_exists;
+
+let lovely_path = ensure_lovely_exists().await?;
+println!("Lovely installed at: {}", lovely_path.display());
+```
+
+### get_latest_lovely_version()
+
+Queries GitHub for the latest Lovely release version.
+
+```rust
+pub async fn get_latest_lovely_version() -> Result<String, AppError>
+```
+
+<ResponseField name="Returns" type="String">
+  Version string (e.g., "0.8.0") without 'v' prefix
+</ResponseField>
+
+**Caching Strategy**:
+- **In-Memory**: 24 hours
+- **Disk**: Survives app restarts (stored in `lovely_version_cache.json`)
+- **Network Timeout**: 10 seconds
+
+**Implementation** (lovely.rs:444-530):
+```rust
+// Check in-memory cache
+if let Some(cached) = guard.as_ref()
+    && cached.fetched_at.elapsed() < Duration::from_secs(VERSION_CACHE_TTL_SECS)
+{
+    return Ok(cached.version.clone());
+}
+
+// Check disk cache (survives restarts)
+if let Some(version) = load_persisted_version_cache() {
+    return Ok(version);
+}
+
+// Fetch from GitHub
+let resp = client
+    .get("https://github.com/ethangreen-dev/lovely-injector/releases/latest")
+    .send()
+    .await?;
+
+let location = resp.headers().get(LOCATION);
+let version = location.split('/').last().trim_start_matches('v');
+```
+
+<Note>
+GitHub redirects `/releases/latest` to `/releases/tag/vX.Y.Z`. The version is extracted from the redirect URL.
+</Note>
+
+**Example**:
+
+```rust
+use bmm_lib::lovely::get_latest_lovely_version;
+
+let version = get_latest_lovely_version().await?;
+println!("Latest Lovely version: {}", version);
+```
+
+### remove_installed_lovely()
+
+Removes currently installed Lovely artifacts for clean reinstallation.
+
+```rust
+pub async fn remove_installed_lovely() -> Result<(), AppError>
+```
+
+**Cleanup Targets**:
+
+**macOS**:
+- `~/.config/Balatro/bins/liblovely.dylib`
+
+**Windows/Linux**:
+- Game directory: `version.dll`
+- Linux only: `liblovely.so` (native LOVE builds)
+- Linux cache: `~/.config/Balatro/bins/version.dll`, `liblovely.so`
+
+**Example**:
+
+```rust
+use bmm_lib::lovely::remove_installed_lovely;
+
+remove_installed_lovely().await?;
+println!("Lovely uninstalled");
+```
+
+## Injector Toggle Functions
+
+### set_injector_enabled()
+
+Enables or disables the Lovely injector by renaming files.
+
+```rust
+pub fn set_injector_enabled(enabled: bool) -> Result<(), AppError>
+```
+
+<ParamField path="enabled" type="bool" required>
+  `true` to enable, `false` to disable
+</ParamField>
+
+**Behavior**:
+- **Enable**: Renames `.disabled` files back to active names
+- **Disable**: Renames active files to `.disabled`
+- **Preserves Files**: Files are renamed, not deleted
+
+**File Mappings**:
+
+| Platform | Active | Disabled |
+|----------|--------|----------|
+| macOS | `liblovely.dylib` | `liblovely.dylib.disabled` |
+| Windows/Linux | `version.dll` | `version.dll.disabled` |
+| Linux (native) | `liblovely.so` | `liblovely.so.disabled` |
+
+**Example**:
+
+```rust
+use bmm_lib::lovely::set_injector_enabled;
+use bmm_lib::database::Database;
+
+// Disable mods temporarily
+set_injector_enabled(false)?;
+
+// Save preference
+let db = Database::new()?;
+db.set_launch_mode("vanilla")?;
+```
+
+### is_injector_enabled()
+
+Checks if the injector is currently enabled.
+
+```rust
+pub fn is_injector_enabled() -> Result<bool, AppError>
+```
+
+<ResponseField name="Returns" type="bool">
+  `true` if active file exists, `false` if disabled or not found
+</ResponseField>
+
+**Example**:
+
+```rust
+use bmm_lib::lovely::is_injector_enabled;
+
+if is_injector_enabled()? {
+    println!("Mods are enabled");
+} else {
+    println!("Running in vanilla mode");
+}
+```
+
+## Platform-Specific Installation
+
+### Windows/Linux (Proton)
+
+#### ensure_version_dll_exists()
+
+Ensures `version.dll` exists in the game directory.
+
+```rust
+pub async fn ensure_version_dll_exists(game_path: &Path) -> Result<PathBuf, AppError>
+```
+
+<ParamField path="game_path" type="&Path" required>
+  Path to the Balatro game directory
+</ParamField>
+
+**Windows Behavior** (lovely.rs:140-147):
+```rust
+if !dll_path.exists() {
+    download_version_dll(&dll_path).await?;
+}
+Ok(dll_path)
+```
+
+**Linux Behavior** (lovely.rs:108-137):
+```rust
+// Cache in ~/.config/Balatro/bins/
+let bins_dir = config_dir.join("Balatro/bins");
+let cached_dll = bins_dir.join("version.dll");
+
+if !cached_dll.exists() {
+    download_version_dll(&cached_dll).await?;
+}
+
+// Copy to game directory (Steam may verify/restore files)
+fs::copy(&cached_dll, &dll_path)?;
+```
+
+<Note>
+Linux caches the DLL and copies it on each launch to survive Steam file verification.
+</Note>
+
+#### download_version_dll()
+
+Downloads and extracts `version.dll` from GitHub releases.
+
+**Download URL**:
+```
+https://github.com/ethangreen-dev/lovely-injector/releases/latest/download/lovely-x86_64-pc-windows-msvc.zip
+```
+
+**Extraction** (lovely.rs:937-965):
+```rust
+let mut archive = ZipArchive::new(zip_file)?;
+for i in 0..archive.len() {
+    let mut file = archive.by_index(i)?;
+    if file.name().ends_with("version.dll") {
+        let mut outfile = File::create(target_path)?;
+        std::io::copy(&mut file, &mut outfile)?;
+        break;
+    }
+}
+```
+
+### macOS
+
+#### download_and_install_lovely()
+
+Downloads and installs the macOS Lovely dylib.
+
+```rust
+async fn download_and_install_lovely(target_path: &Path) -> Result<(), AppError>
+```
+
+**Architecture Detection** (lovely.rs:151-199):
+```rust
+fn detect_architecture() -> Result<&'static str, AppError> {
+    use libc::sysctl;
+    // Query HW_MACHINE via sysctl
+    match machine {
+        "arm64" => Ok("aarch64"),
+        "x86_64" => Ok("x86_64"),
+        other => Err(AppError::UnsupportedArchitecture(other.into())),
+    }
+}
+```
+
+**Download URL**:
+```
+https://github.com/ethangreen-dev/lovely-injector/releases/latest/download/lovely-{arch}-apple-darwin.tar.gz
+```
+
+**Extraction** (lovely.rs:790-813):
+```rust
+let tar_gz = File::open(&temp_tar_gz)?;
+let tar = GzDecoder::new(tar_gz);
+let mut archive = Archive::new(tar);
+
+archive.unpack(&temp_dir)?;
+let extracted_lib = temp_dir.path().join("liblovely.dylib");
+fs::copy(&extracted_lib, target_path)?;
+
+// Set executable permissions
+std::fs::set_permissions(target_path, Permissions::from_mode(0o755))?;
+```
+
+### Linux (Native LOVE)
+
+#### ensure_lovely_so_exists()
+
+Ensures `liblovely.so` exists for native LOVE builds.
+
+```rust
+pub async fn ensure_lovely_so_exists(game_path: &Path) -> Result<PathBuf, AppError>
+```
+
+**Caching Strategy** (lovely.rs:307-338):
+```rust
+let bins_dir = config_dir.join("Balatro/bins");
+let cached_so = bins_dir.join("liblovely.so");
+
+if !cached_so.exists() {
+    download_lovely_linux(&cached_so).await?;
+}
+
+let target_so = game_path.join("liblovely.so");
+fs::copy(&cached_so, &target_so)?;
+
+// Ensure executable for preload
+let perms = Permissions::from_mode(0o755);
+fs::set_permissions(&target_so, perms)?;
+```
+
+#### ensure_love_binary()
+
+Downloads and extracts LOVE 11.5 AppImage for native Linux play.
+
+```rust
+pub async fn ensure_love_binary() -> Result<(PathBuf, Option<PathBuf>), AppError>
+```
+
+<ResponseField name="Returns" type="(PathBuf, Option<PathBuf>)">
+  Tuple of (love binary path, optional lib directory)
+</ResponseField>
+
+**Download URL**:
+```
+https://github.com/love2d/love/releases/download/11.5/love-11.5-x86_64.AppImage
+```
+
+**Extraction** (lovely.rs:404-416):
+```rust
+let mut extract = Command::new(&temp_appimage);
+extract
+    .arg("--appimage-extract")
+    .env("APPIMAGE_EXTRACT_AND_RUN", "1")
+    .current_dir(target_dir);
+
+extract.status()?;
+```
+
+**Extraction Output** (lovely.rs:418-436):
+```
+target_dir/
+└── squashfs-root/
+    ├── bin/love          <- Moved to target_dir/bin/love
+    ├── lib/              <- Moved to target_dir/lib/
+    └── ...
+```
+
+<Note>
+The AppImage is extracted to `~/.config/Balatro/bins/love/` and reused across launches.
+</Note>
+
+## Version Cache Implementation
+
+### In-Memory Cache
+
+```rust
+struct CachedVersion {
+    version: String,
+    fetched_at: Instant,
+}
+
+static VERSION_CACHE: OnceLock<Mutex<Option<CachedVersion>>> = OnceLock::new();
+const VERSION_CACHE_TTL_SECS: u64 = 60 * 60 * 24; // 24 hours
+```
+
+### Disk-Persisted Cache
+
+**Structure** (lovely.rs:38-43):
+```rust
+#[derive(serde::Serialize, serde::Deserialize)]
+struct PersistedVersionCache {
+    version: String,
+    fetched_at_unix: u64,  // Unix timestamp in seconds
+}
+```
+
+**Storage Location**:
+```
+~/.config/Balatro/lovely_version_cache.json
+```
+
+**Save** (lovely.rs:75-95):
+```rust
+fn save_persisted_version_cache(version: &str) {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    let cached = PersistedVersionCache {
+        version: version.to_string(),
+        fetched_at_unix: now,
+    };
+    fs::write(&path, serde_json::to_string(&cached)?)?;
+}
+```
+
+**Load** (lovely.rs:55-72):
+```rust
+fn load_persisted_version_cache() -> Option<String> {
+    let cached: PersistedVersionCache = serde_json::from_str(&content).ok()?;
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs();
+    
+    if now.saturating_sub(cached.fetched_at_unix) < VERSION_CACHE_TTL_SECS {
+        Some(cached.version)
+    } else {
+        None
+    }
+}
+```
+
+## Helper Functions
+
+### toggle_injector_file()
+
+Low-level function to toggle between active and disabled states.
+
+```rust
+fn toggle_injector_file(
+    active_path: &Path,
+    disabled_path: &Path,
+    enable: bool,
+) -> Result<(), AppError>
+```
+
+<ParamField path="active_path" type="&Path" required>
+  Path to the active injector file
+</ParamField>
+
+<ParamField path="disabled_path" type="&Path" required>
+  Path to the disabled (.disabled) file
+</ParamField>
+
+<ParamField path="enable" type="bool" required>
+  `true` to enable, `false` to disable
+</ParamField>
+
+**Enable Logic** (lovely.rs:702-719):
+```rust
+if disabled_path.exists() {
+    if active_path.exists() {
+        // Corrupt state: both exist, remove disabled
+        fs::remove_file(disabled_path)?;
+    } else {
+        // Normal: rename disabled to active
+        fs::rename(disabled_path, active_path)?;
+    }
+}
+```
+
+**Disable Logic** (lovely.rs:721-738):
+```rust
+if active_path.exists() {
+    if disabled_path.exists() {
+        // Corrupt state: both exist, remove active
+        fs::remove_file(active_path)?;
+    } else {
+        // Normal: rename active to disabled
+        fs::rename(active_path, disabled_path)?;
+    }
+}
+```
+
+## Error Handling
+
+Common errors returned:
+
+- `AppError::Network` - Download failure or timeout
+- `AppError::DirNotFound` - Config directory or Balatro installation not found
+- `AppError::DirCreate` - Failed to create bins directory
+- `AppError::FileCopy` - Failed to copy cached files
+- `AppError::FileWrite` / `AppError::FileRead` - I/O errors
+- `AppError::InvalidState` - Version parsing failure, extraction error
+- `AppError::UnsupportedArchitecture` - Unknown macOS architecture
+- `AppError::SystemDetection` - Failed to detect system information
+
+## Examples
+
+### Installing Lovely
+
+```rust
+use bmm_lib::lovely::ensure_lovely_exists;
+use bmm_lib::database::Database;
+
+let lovely_path = ensure_lovely_exists().await?;
+let version = get_latest_lovely_version().await?;
+
+// Save version to database
+let db = Database::new()?;
+db.set_lovely_version(&version)?;
+
+println!("Lovely {} installed at {}", version, lovely_path.display());
+```
+
+### Checking for Updates
+
+```rust
+use bmm_lib::lovely::get_latest_lovely_version;
+use bmm_lib::database::Database;
+
+let db = Database::new()?;
+let installed_version = db.get_lovely_version()?.unwrap_or_default();
+let latest_version = get_latest_lovely_version().await?;
+
+if installed_version != latest_version {
+    println!("Update available: {} -> {}", installed_version, latest_version);
+}
+```
+
+### Toggling Vanilla Mode
+
+```rust
+use bmm_lib::lovely::{set_injector_enabled, is_injector_enabled};
+use bmm_lib::database::Database;
+
+let db = Database::new()?;
+let vanilla_mode = db.get_launch_mode()? == "vanilla";
+
+set_injector_enabled(!vanilla_mode)?;
+println!("Mods {}", if vanilla_mode { "disabled" } else { "enabled" });
+```
+
+### Complete Reinstall
+
+```rust
+use bmm_lib::lovely::{remove_installed_lovely, ensure_lovely_exists};
+
+// Remove old installation
+remove_installed_lovely().await?;
+
+// Install fresh copy
+let lovely_path = ensure_lovely_exists().await?;
+println!("Lovely reinstalled successfully");
+```

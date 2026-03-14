@@ -1,0 +1,336 @@
+---
+title: 'Common Issues'
+description: 'Solutions to frequently encountered problems with Balatro Mod Manager'
+icon: 'triangle-exclamation'
+---
+
+## Installation & Path Detection
+
+<AccordionGroup>
+  <Accordion title="Balatro installation path not detected automatically" icon="folder">
+    The mod manager tries to detect your Balatro installation using multiple methods:
+
+    <Steps>
+      <Step title="Check Steam library folders">
+        The manager scans your Steam `libraryfolders.vdf` file to find all Steam libraries, then looks for Balatro in each one.
+
+        **Windows:** `C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf`
+
+        **macOS:** `~/Library/Application Support/Steam/steamapps/libraryfolders.vdf`
+
+        **Linux:** `~/.local/share/Steam/steamapps/libraryfolders.vdf` (or Flatpak paths)
+      </Step>
+
+      <Step title="Set a custom path">
+        If auto-detection fails, you can manually set your Balatro installation path in the mod manager settings.
+      </Step>
+
+      <Step title="Verify the path exists">
+        Make sure the path contains `Balatro.exe` (Windows/Linux via Proton) or the Balatro app bundle (macOS).
+      </Step>
+    </Steps>
+
+    <Note>
+      The path cache refreshes every 5 minutes. If you just installed Balatro or changed your Steam library, restart the mod manager or wait a few minutes.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Xbox Game Pass version not supported" icon="ban">
+    Balatro Mod Manager is **NOT compatible** with the Xbox Game Pass version of Balatro.
+
+    This is a technical limitation due to the way Game Pass versions are packaged and sandboxed. You must use the Steam, GOG, or direct purchase version to use mods.
+
+    <Card title="Workaround" icon="lightbulb">
+      If you own Balatro on Game Pass, consider purchasing it on Steam during a sale to enable mod support.
+    </Card>
+  </Accordion>
+
+  <Accordion title="'Directory not found' or 'DirNotFound' errors" icon="folder-xmark">
+    These errors occur when the mod manager can't find required directories:
+
+    **Error pattern:** `Directory not found: '/path/to/directory'`
+
+    **Common causes:**
+    - Balatro installation path changed or was uninstalled
+    - Config directory doesn't exist (should be auto-created)
+    - Insufficient permissions
+
+    **Solutions:**
+    1. Verify your Balatro installation still exists at the configured path
+    2. Check file permissions on `~/.config/Balatro` (Linux/macOS) or `%APPDATA%\Balatro` (Windows)
+    3. Try manually creating the Mods directory: `~/.config/Balatro/Mods`
+    4. Restart the mod manager to trigger auto-directory creation
+  </Accordion>
+</AccordionGroup>
+
+## Mod Installation Errors
+
+<AccordionGroup>
+  <Accordion title="'Rate limit exceeded' or HTTP 429 errors" icon="hourglass">
+    The mod manager implements automatic retry with exponential backoff for rate-limited requests.
+
+    **Error pattern:** `Rate limit exceeded`, `HTTP 429`, or `Too many requests`
+
+    **What happens automatically:**
+    - The manager retries up to 3 times
+    - Wait time doubles between retries (500ms → 1s → 2s)
+    - You'll see warnings in the logs
+
+    **If it still fails:**
+    - Wait 5-10 minutes before trying again
+    - GitHub API and mod hosting sites have hourly rate limits
+    - Check [GitHub Status](https://www.githubstatus.com/) if you suspect service issues
+
+    <Tip>
+      Installing many mods in quick succession can trigger rate limits. Try installing mods in smaller batches with breaks in between.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="'Failed to install mod' errors" icon="download">
+    **Error pattern:** `Failed to install mod 'ModName': <reason>`
+
+    **Common causes and solutions:**
+
+    | Error Message | Cause | Solution |
+    |--------------|-------|----------|
+    | `Network error` | Connection issue | Check internet connection; retry |
+    | `Archive too large` | Mod exceeds size limit | Contact mod author; check for compressed version |
+    | `Failed to read file` | Corrupted download | Clear cache and reinstall |
+    | `Permission denied` | Insufficient permissions | Run as admin (Windows) or check folder permissions |
+    | `Mod not found` | Invalid mod URL or removed mod | Verify the mod still exists; try a different version |
+
+    <Warning>
+      If you see `download URL not reachable`, the mod hosting service may be down temporarily. Check the mod's GitHub repository or hosting site.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="'Database error' messages" icon="database">
+    **Error pattern:** `Database initialization failed` or `Database error: <details>`
+
+    The mod manager uses SQLite to track installed mods. Database errors are rare but can occur.
+
+    **Solutions:**
+    <Steps>
+      <Step title="Close all mod manager instances">
+        Make sure you don't have multiple instances running (check system tray).
+      </Step>
+
+      <Step title="Backup and reset database">
+        1. Navigate to the database location:
+           - **Windows:** `%APPDATA%\balatro-mod-manager\`
+           - **macOS:** `~/Library/Application Support/balatro-mod-manager/`
+           - **Linux:** `~/.config/balatro-mod-manager/`
+
+        2. Rename the database file (e.g., `database.db` → `database.db.backup`)
+
+        3. Restart the mod manager (it will create a fresh database)
+      </Step>
+
+      <Step title="Re-detect mods">
+        The manager will automatically detect installed mods in your `Mods` folder and rebuild the database.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="Mods not showing up after installation" icon="eye-slash">
+    **Checklist:**
+    - [ ] Mod was installed successfully (check logs)
+    - [ ] Mod folder exists in `~/.config/Balatro/Mods` (or platform equivalent)
+    - [ ] Mod is enabled (not marked with `.lovelyignore`)
+    - [ ] Lovely injector is installed (required for most mods)
+    - [ ] Game was restarted after mod installation
+
+    **Force a refresh:**
+    1. Use the "Reindex Mods" function in settings
+    2. This scans the filesystem and syncs with the database
+    3. Removes entries for mods that no longer exist
+
+    <Info>
+      The reindex operation runs automatically in the background, but you can trigger it manually if mods seem out of sync.
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+## Launch Issues
+
+<AccordionGroup>
+  <Accordion title="Game won't launch from mod manager" icon="rocket">
+    **Platform-specific troubleshooting:**
+
+    <Tabs>
+      <Tab title="Windows">
+        **Common issues:**
+        - Missing `version.dll` (Lovely injector)
+        - Balatro.exe path changed
+        - Antivirus blocking Lovely
+
+        **Solutions:**
+        1. Verify Balatro.exe exists at the configured path
+        2. Check Windows Defender or antivirus hasn't quarantined `version.dll`
+        3. Try launching in vanilla mode (skips mod injection)
+        4. Check logs for "Failed to launch" errors
+      </Tab>
+
+      <Tab title="macOS">
+        **Common issues:**
+        - DYLD_INSERT_LIBRARIES blocked by SIP
+        - App bundle path incorrect
+        - Terminal permission issues
+
+        **Solutions:**
+        1. Grant Terminal/mod manager Full Disk Access in System Preferences
+        2. Verify the app bundle at `/Applications/Balatro.app` or Steam's path
+        3. Check Console.app for Balatro crash logs
+        4. Try disabling "Enable Lovely Console" if Terminal won't open
+      </Tab>
+
+      <Tab title="Linux">
+        **Common issues:**
+        - Missing LOVE runtime
+        - Proton prefix misconfigured
+        - LD_PRELOAD blocked by Flatpak sandbox
+        - WINEDLLOVERRIDES not set correctly
+
+        **Solutions:**
+        1. **Native LOVE:** Install LOVE: `sudo apt install love` (Ubuntu/Debian) or set `BMM_LOVE_BIN` environment variable
+        2. **Proton/Steam:** Verify Linux prefix command in settings (e.g., `steam -applaunch 2379780`)
+        3. **Flatpak:** Check `~/.config/Balatro/logs/prefix-launch.log` for launch errors
+        4. Ensure `WINEDLLOVERRIDES=version=n,b` is set for modded mode
+
+        <Warning>
+          On Wayland, the mod manager defaults to X11 for compatibility. Set `BMM_ALLOW_WAYLAND=1` if you want to force Wayland.
+        </Warning>
+      </Tab>
+    </Tabs>
+  </Accordion>
+
+  <Accordion title="Mods not loading in game (vanilla mode issue)" icon="toggle-off">
+    If Balatro launches but mods don't load:
+
+    **Check launch mode:**
+    - The mod manager supports "Modded" and "Vanilla" launch modes
+    - Vanilla mode uses the `--vanilla` flag (Lovely 0.9.0+) to skip mod loading
+    - Verify you're launching in **Modded** mode
+
+    **Verify Lovely injection:**
+    - **Windows:** Check if `version.dll` exists in your Balatro directory
+    - **macOS:** Check if `liblovely.dylib` is being injected (see logs)
+    - **Linux (Proton):** Verify `WINEDLLOVERRIDES=version=n,b` is set
+    - **Linux (native):** Check if `liblovely.so` exists and `LD_PRELOAD` is set
+
+    **Test with a simple mod:**
+    Install a lightweight mod like "Mod Template" to verify mod loading works before troubleshooting specific mods.
+  </Accordion>
+
+  <Accordion title="'Prefix executable not found' (Linux only)" icon="terminal">
+    **Error pattern:** `Prefix executable not found` or `not executable`
+
+    This occurs when using a custom Linux prefix command (e.g., for Proton).
+
+    **Validation checks:**
+    - Executable path must exist on the filesystem
+    - Must be a regular file (not a directory)
+    - Must have execute permissions (mode `0o111`)
+
+    **Example valid prefixes:**
+    ```bash
+    # Steam launch
+    steam -applaunch 2379780
+
+    # Proton with environment variables
+    PROTON_LOG=1 PROTON_LOG_DIR=/tmp/proton steam -applaunch 2379780
+
+    # Direct executable with placeholder
+    /path/to/proton run {exe}
+    ```
+
+    <Tip>
+      Use `{exe}` as a placeholder for the Balatro executable in your prefix command. The manager will replace it with the actual path.
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+## Dependency & Framework Issues
+
+<AccordionGroup>
+  <Accordion title="Can't uninstall Steamodded or Talisman" icon="link">
+    **Error pattern:** `Use cascade_uninstall to remove Steamodded with X dependents`
+
+    Steamodded and Talisman are **framework mods** — many other mods depend on them.
+
+    **You have two options:**
+
+    1. **Cascade uninstall (recommended):**
+       - Removes the framework AND all mods that depend on it
+       - Use the "Uninstall with dependents" option in the UI
+       - Calls the `cascade_uninstall` command internally
+
+    2. **Uninstall dependent mods first:**
+       - Manually uninstall all mods that require the framework
+       - Then uninstall the framework itself
+       - Use "Get dependents" to see which mods depend on it
+
+    <Warning>
+      Cascade uninstall cannot be undone. Make sure you want to remove all dependent mods before proceeding.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Mod version conflicts" icon="code-branch">
+    The mod manager tracks mod versions and dependencies in the database.
+
+    **If you see version-related errors:**
+    - Check the mod's required version of Steamodded/Talisman
+    - Update framework mods first, then update dependent mods
+    - Some mods may require specific versions — check mod documentation
+
+    **Viewing installed versions:**
+    The "Installed Mods" view shows current versions for each mod. Use this to verify compatibility.
+  </Accordion>
+</AccordionGroup>
+
+## Performance & Cache Issues
+
+<AccordionGroup>
+  <Accordion title="Slow mod list loading or thumbnails not showing" icon="image">
+    The mod manager caches mod information and thumbnails to improve performance.
+
+    **Clear cache:**
+    1. Close the mod manager
+    2. Navigate to the cache directory:
+       - **Windows:** `%APPDATA%\balatro-mod-manager\cache\`
+       - **macOS:** `~/Library/Application Support/balatro-mod-manager/cache/`
+       - **Linux:** `~/.config/balatro-mod-manager/cache/`
+    3. Delete cache files or the entire cache folder
+    4. Restart the mod manager (cache will be rebuilt)
+
+    <Info>
+      The thumbnail queue processes images in the background. Large mod lists may take a minute to fully load thumbnails on first launch.
+    </Info>
+  </Accordion>
+
+  <Accordion title="High memory usage" icon="memory">
+    **Normal behavior:**
+    - Mod catalog with images cached in memory
+    - Background thumbnail downloads
+    - SQLite database connections
+
+    **If memory usage seems excessive:**
+    1. Clear thumbnail cache (see above)
+    2. Reduce number of mods in the catalog (filter by installed/favorites)
+    3. Restart the mod manager to free memory
+
+    The mod manager uses Tauri (Rust + WebView), which is generally memory-efficient, but large catalogs with many images can consume 200-500 MB of RAM.
+  </Accordion>
+</AccordionGroup>
+
+## Still Having Issues?
+
+If your problem isn't listed here:
+
+1. **Check the logs** — see [Logs & Debugging](/troubleshooting/logs) for log locations
+2. **Search existing issues** on [GitHub Issues](https://github.com/skyline69/balatro-mod-manager/issues)
+3. **Report a bug** — see [Reporting Bugs](/troubleshooting/reporting-bugs) for how to submit detailed bug reports
+
+<Card title="Need Help?" icon="question" href="https://github.com/skyline69/balatro-mod-manager/discussions">
+  Join the GitHub Discussions for community support and questions.
+</Card>

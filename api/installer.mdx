@@ -1,0 +1,362 @@
+---
+title: 'Installer'
+description: 'Mod installation and uninstallation with archive extraction support'
+---
+
+The `Installer` module handles downloading mods from URLs and extracting them into the Balatro Mods directory. It supports ZIP, tar.gz, and tar archives with security measures against path traversal attacks.
+
+## Supported Archive Formats
+
+- **ZIP archives** (`.zip`) - Most common format
+- **Gzipped tarballs** (`.tar.gz`, `.tgz`) - Common for Linux/macOS
+- **Plain tar archives** (`.tar`)
+
+<Note>
+Archive format is automatically detected from magic bytes, not file extensions.
+</Note>
+
+## Installation Function
+
+### install_mod()
+
+Downloads and installs a mod from a given URL.
+
+```rust
+pub async fn install_mod(url: String, folder_name: Option<String>) -> Result<PathBuf, AppError>
+```
+
+<ParamField path="url" type="String" required>
+  The download URL for the mod archive
+</ParamField>
+
+<ParamField path="folder_name" type="Option<String>">
+  Optional custom folder name for the installed mod. If not provided, extracts from URL or archive structure.
+</ParamField>
+
+<ResponseField name="Returns" type="PathBuf">
+  The path to the installed mod directory
+</ResponseField>
+
+**Installation Process**:
+
+1. **Download**: Stream archive to temp file to minimize memory usage
+2. **Detect Format**: Use magic bytes to identify archive type
+3. **Extract**: Use staging directory for atomic installation
+4. **Cleanup**: Remove old version if upgrading
+
+**Example**:
+
+```rust
+use bmm_lib::installer::install_mod;
+
+let mod_path = install_mod(
+    "https://github.com/user/mod/releases/download/v1.0/mod.zip".to_string(),
+    Some("CustomModName".to_string()),
+).await?;
+
+println!("Mod installed to: {}", mod_path.display());
+```
+
+<Warning>
+If a mod with the same name exists, it will be uninstalled first. The disabled state (`.lovelyignore` marker) is preserved during upgrades.
+</Warning>
+
+### Archive Detection
+
+The installer uses magic bytes for reliable format detection:
+
+**ZIP Detection** (installer.rs:385-390):
+```rust
+// Checks for PK signatures
+0x50 0x4B 0x03 0x04  // Local file header
+0x50 0x4B 0x05 0x06  // End of central directory
+0x50 0x4B 0x07 0x08  // Spanned archive
+```
+
+**Gzip Detection** (installer.rs:392-394):
+```rust
+0x1F 0x8B  // Gzip magic number
+```
+
+**Tar Detection** (installer.rs:396-398):
+```rust
+// Checks for "ustar" at byte offset 257
+```
+
+<Expandable title="Fallback Detection Strategy">
+
+1. **Primary**: Magic byte analysis (most reliable)
+2. **Secondary**: `infer` crate MIME type detection
+3. **Tertiary**: HTTP headers (`Content-Type`, `Content-Disposition`)
+4. **Quaternary**: URL file extension
+
+Headers/extensions are only trusted if they match magic bytes to prevent MIME-type attacks.
+
+</Expandable>
+
+## Uninstallation Function
+
+### uninstall_mod()
+
+Removes a mod directory with validation and retry logic.
+
+```rust
+pub async fn uninstall_mod(path: PathBuf) -> Result<(), AppError>
+```
+
+<ParamField path="path" type="PathBuf" required>
+  Path to the mod directory to remove
+</ParamField>
+
+**Safety Checks**:
+
+1. **Path exists** - Rejects non-existent paths
+2. **Within Mods directory** - Prevents deletion outside mod folder
+3. **Not the Mods root** - Blocks attempts to delete entire Mods directory
+
+**Example**:
+
+```rust
+use bmm_lib::installer::uninstall_mod;
+use std::path::PathBuf;
+
+let mod_path = PathBuf::from("/path/to/Mods/MyMod");
+uninstall_mod(mod_path).await?;
+```
+
+<Warning>
+Uninstallation uses retry logic (5 attempts) to handle file locks on Windows. There's a 250ms delay on Windows and 100ms on Linux after uninstall to ensure file handles are released.
+</Warning>
+
+## Security Features
+
+### Path Traversal Prevention
+
+All archive entries are sanitized to prevent path traversal attacks.
+
+**Path Sanitization** (installer.rs:355-383):
+```rust
+fn sanitize_archive_path(entry_name: &str) -> Option<PathBuf>
+```
+
+**Blocked Patterns**:
+- `..` (parent directory references)
+- Absolute paths (`/etc/passwd`, `C:\Windows\...`)
+- Path prefixes (Windows drive letters)
+- Root directory components
+
+**Example**:
+```rust
+// Rejected paths
+sanitize_archive_path("../../../etc/passwd")  // None
+sanitize_archive_path("/etc/passwd")          // None
+sanitize_archive_path("C:\\Windows\\...")    // None
+
+// Accepted paths
+sanitize_archive_path("mod/init.lua")         // Some(PathBuf)
+sanitize_archive_path("./mod/file.lua")       // Some(PathBuf) - "." stripped
+```
+
+### Size Limits
+
+Protects against decompression bombs:
+
+```rust
+const MAX_DECOMPRESSED_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2 GB
+const MAX_ARCHIVE_FILES: usize = 10_000;
+```
+
+<ParamField path="MAX_DECOMPRESSED_SIZE" type="u64" default="2 GB">
+  Maximum total decompressed size allowed
+</ParamField>
+
+<ParamField path="MAX_ARCHIVE_FILES" type="usize" default="10,000">
+  Maximum number of files in an archive
+</ParamField>
+
+## Archive Extraction Details
+
+### ZIP Extraction
+
+Handles two archive structures:
+
+**Root Files** (installer.rs:518-529):
+```
+archive.zip
+├── init.lua
+├── main.lua
+└── config.json
+```
+Extracts directly to target directory.
+
+**Nested Folder** (installer.rs:539-572):
+```
+archive.zip
+└── ModFolder/
+    ├── init.lua
+    ├── main.lua
+    └── config.json
+```
+Extracts inner folder to target directory (unwraps outer folder).
+
+### Tar/Tar.gz Extraction
+
+**Extraction Process** (installer.rs:774-826):
+```rust
+fn extract_tar_contents(tar: &mut Archive<impl Read>, target_dir: &Path) -> Result<(), AppError>
+```
+
+- Validates decompressed size and file count
+- Sanitizes all entry paths
+- Creates parent directories automatically
+- Sets proper permissions (Unix)
+
+### Staging Directory Pattern
+
+All extractions use atomic staging:
+
+```rust
+let staging_dir = mod_dir.join(format!(".staging_{}", mod_name));
+
+// Extract to staging
+extract_to(&staging_dir)?;
+
+// Atomic rename to final location
+fs::rename(&staging_dir, &target_dir)?;
+```
+
+**Benefits**:
+- Prevents partial installations on failure
+- Atomic operation (rename is atomic on most filesystems)
+- Cleanup on error doesn't leave corrupted state
+
+## Platform-Specific Behavior
+
+### Windows
+
+- **Retry Logic**: 5 retries with exponential backoff (100ms, 200ms, 400ms, 800ms, 1600ms)
+- **File Lock Delays**: 250ms delay after uninstall to release handles
+- **Path Handling**: Normalizes backslashes to forward slashes internally
+
+### Linux (Proton)
+
+- **Symlink Support**: Ensures Proton mod directory symlinks exist before installation
+- **File Lock Delays**: 100ms delay after uninstall
+- **Retry Logic**: 5 retries with exponential backoff (50ms, 100ms, 200ms, 400ms, 800ms)
+
+### macOS
+
+- **Special Handling**: Skips `__MACOSX/` metadata folders in ZIP archives
+- **Permissions**: Preserves Unix file permissions from archives
+
+## Helper Functions
+
+### sanitize_mod_name()
+
+Sanitizes folder names by removing illegal characters.
+
+```rust
+fn sanitize_mod_name(name: &str) -> String
+```
+
+**Transformations**:
+- Replace illegal chars (`/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`) with spaces
+- Collapse multiple spaces to single space
+- Trim trailing spaces and dots
+- Remove control characters
+
+**Example**:
+```rust
+sanitize_mod_name("Agarmons: A Pokermon Addon")
+// Returns: "Agarmons A Pokermon Addon"
+```
+
+### apply_disabled_marker()
+
+Applies `.lovelyignore` markers to disable a mod.
+
+```rust
+fn apply_disabled_marker(mod_path: &Path) -> Result<(), AppError>
+```
+
+Creates `.lovelyignore` files in:
+- Mod root directory
+- All immediate subdirectories
+
+<Note>
+This function is called automatically during upgrades if the mod was previously disabled.
+</Note>
+
+## Error Handling
+
+Common errors returned:
+
+- `AppError::NetworkRequest` - Download failure (timeout, connection error, HTTP error)
+- `AppError::InvalidState` - Unsupported archive format
+- `AppError::ArchiveTooLarge` - Size/file count limits exceeded
+- `AppError::PathValidation` - Path traversal attempt detected
+- `AppError::FileWrite` / `AppError::FileRead` - I/O errors
+- `AppError::DirCreate` - Directory creation failure
+
+**Network Error Details** (installer.rs:89-103):
+```rust
+if e.is_timeout() {
+    log::error!("Request timed out for URL: {}", url);
+} else if e.is_connect() {
+    log::error!("Connection failed for URL: {} - {}", url, e);
+}
+```
+
+## Memory Optimization
+
+The installer minimizes memory usage through streaming:
+
+**Streaming Download** (installer.rs:134-181):
+```rust
+// Stream to temp file instead of loading into memory
+let temp_file_path = temp_dir.join(format!("bmm_download_{}_{}.tmp", pid, unique_id));
+while let Some(chunk) = response.chunk().await? {
+    temp_file.write_all(&chunk).await?;
+}
+```
+
+**Benefits**:
+- Peak memory: ~64 KB (chunk size) instead of full archive size
+- Supports large mod archives without OOM
+- Captures magic bytes from first 512 bytes for detection
+
+## Examples
+
+### Installing from GitHub Releases
+
+```rust
+use bmm_lib::installer::install_mod;
+
+let url = "https://github.com/user/MyMod/releases/latest/download/MyMod.zip";
+let mod_path = install_mod(url.to_string(), None).await?;
+println!("Installed to: {}", mod_path.display());
+```
+
+### Custom Folder Name
+
+```rust
+let url = "https://example.com/download/main.zip";
+let mod_path = install_mod(
+    url.to_string(),
+    Some("DescriptiveName".to_string()),
+).await?;
+```
+
+### Uninstalling with Error Handling
+
+```rust
+use bmm_lib::installer::uninstall_mod;
+use std::path::PathBuf;
+
+let mod_path = PathBuf::from("/path/to/Mods/OldMod");
+
+match uninstall_mod(mod_path).await {
+    Ok(_) => println!("Uninstalled successfully"),
+    Err(e) => eprintln!("Uninstall failed: {}", e),
+}
+```

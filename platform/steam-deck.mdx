@@ -1,0 +1,443 @@
+---
+title: "Steam Deck Installation"
+description: "Step-by-step guide to installing and using Balatro Mod Manager on Steam Deck"
+---
+
+## Overview
+
+Balatro Mod Manager runs natively on Steam Deck through Flatpak. The process is similar to [Linux installation](/platform/linux) but with Steam Deck-specific considerations.
+
+<Info>
+  **SteamOS 3.0+** (based on Arch Linux) is required. Flatpak comes pre-installed on Steam Deck.
+</Info>
+
+## Prerequisites
+
+- **Steam Deck running SteamOS 3.0+**
+- **Desktop Mode** access (hold Power → Switch to Desktop)
+- **Balatro installed** via Steam (must be launched at least once)
+- **Keyboard and mouse** (or Steam Deck touchscreen/trackpad)
+
+## Quick Installation
+
+### Automated Install (Recommended)
+
+<Steps>
+  <Step title="Switch to Desktop Mode">
+    1. Hold the **Power** button
+    2. Select **Switch to Desktop**
+    3. Wait for Desktop Mode to load
+  </Step>
+
+  <Step title="Open Konsole (Terminal)">
+    Find and launch **Konsole** from the application menu (bottom-left icon).
+  </Step>
+
+  <Step title="Run Installation Script">
+    Paste this command into Konsole and press Enter:
+
+    ```bash
+    curl -sL https://raw.githubusercontent.com/skyline69/balatro-mod-manager/main/scripts/linux-install.sh | bash
+    ```
+
+    The script will:
+    - Add Flathub remote (if not present)
+    - Install required runtimes (GNOME Platform 47, Node 20, Rust)
+    - Download and install the Flatpak bundle
+  </Step>
+
+  <Step title="Launch from Desktop Mode">
+    After installation:
+
+    ```bash
+    flatpak run io.balatro.ModManager
+    ```
+
+    Or find **"Balatro Mod Manager"** in the application launcher.
+  </Step>
+</Steps>
+
+## Manual Installation
+
+<Steps>
+  <Step title="Add Flathub Remote">
+    Open **Konsole** and run:
+
+    ```bash
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    ```
+  </Step>
+
+  <Step title="Install Required Runtimes">
+    ```bash
+    flatpak install flathub org.gnome.Platform//47 \
+                             org.gnome.Sdk//47 \
+                             org.freedesktop.Sdk.Extension.node20//24.08 \
+                             org.freedesktop.Sdk.Extension.rust-stable//24.08
+    ```
+
+    Press **Y** when prompted (this may take several minutes on the first install).
+  </Step>
+
+  <Step title="Download Flatpak Bundle">
+    Open **Firefox** in Desktop Mode and download the `.flatpak` file from:
+
+    [Latest Release](https://github.com/skyline69/balatro-mod-manager/releases/latest)
+
+    Look for `balatro-mod-manager.flatpak` in the Assets section.
+  </Step>
+
+  <Step title="Install Bundle">
+    In Konsole, navigate to Downloads and install:
+
+    ```bash
+    cd ~/Downloads
+    flatpak install --user balatro-mod-manager.flatpak
+    ```
+  </Step>
+</Steps>
+
+## Using in Game Mode
+
+### Add as Non-Steam Game
+
+<Steps>
+  <Step title="Return to Game Mode">
+    Click the **Return to Gaming Mode** icon on the desktop, or hold Power → Switch to Gaming Mode.
+  </Step>
+
+  <Step title="Add to Steam Library">
+    While in Desktop Mode (before switching back):
+
+    1. Open **Steam** (Desktop version)
+    2. Click **Games** → **Add a Non-Steam Game to My Library**
+    3. Click **Browse...**
+    4. Navigate to: `/home/deck/.var/app/io.balatro.ModManager/`
+    5. Or manually create a shortcut pointing to:
+       ```
+       /usr/bin/flatpak
+       ```
+       With launch options:
+       ```
+       run io.balatro.ModManager
+       ```
+  </Step>
+
+  <Step title="Configure Controller Support">
+    In Steam (Desktop Mode):
+    1. Right-click **Balatro Mod Manager** in your library
+    2. Select **Properties**
+    3. Under **Controller**, set a controller layout (e.g., "Gamepad" or "Mouse")
+  </Step>
+
+  <Step title="Launch from Game Mode">
+    Switch to Game Mode and find Balatro Mod Manager in your library under **Non-Steam Games**.
+  </Step>
+</Steps>
+
+<Warning>
+  The touchscreen interface may require adjustments. For best experience, use the Deck trackpads as a mouse or connect a USB/Bluetooth mouse.
+</Warning>
+
+## File Locations on Steam Deck
+
+### Balatro Installation Path
+
+```bash
+~/.local/share/Steam/steamapps/common/Balatro
+```
+
+The mod manager should auto-detect this path. If not, manually set it in Settings.
+
+### Mod Manager Data
+
+| Data Type | Path |
+|-----------|------|
+| **Configuration** | `~/.var/app/io.balatro.ModManager/config/Balatro/` |
+| **Mods** | `~/.var/app/io.balatro.ModManager/config/Balatro/Mods/` |
+| **Database** | `~/.var/app/io.balatro.ModManager/data/balatro-mod-manager/` |
+| **Cache** | `~/.var/app/io.balatro.ModManager/cache/balatro-mod-manager/` |
+| **Logs** | `~/.var/app/io.balatro.ModManager/data/balatro-mod-manager/logs/` |
+
+<Tip>
+  Use **Dolphin File Manager** (Desktop Mode) to browse these directories.
+</Tip>
+
+## Workflow Recommendations
+
+### Best Practices
+
+1. **Manage mods in Desktop Mode**:
+   - Install/uninstall mods using the mod manager
+   - Browse and download new mods
+
+2. **Play Balatro in Game Mode**:
+   - Launch Balatro normally from your Steam library
+   - Installed mods will work automatically
+
+3. **Sync between sessions**:
+   - Mod manager changes persist across reboots
+   - No need to re-enable mods each time
+
+### Recommended Setup
+
+<Steps>
+  <Step title="Initial Setup (Desktop Mode)">
+    1. Install Balatro Mod Manager (Flatpak)
+    2. Launch the mod manager
+    3. Verify Balatro path is detected
+    4. Install desired mods
+  </Step>
+
+  <Step title="Test Mods (Desktop Mode)">
+    1. Launch Balatro from Desktop Mode Steam
+    2. Verify mods load correctly
+    3. Check for conflicts or issues
+  </Step>
+
+  <Step title="Play Normally (Game Mode)">
+    1. Return to Game Mode
+    2. Launch Balatro
+    3. Enjoy your mods!
+  </Step>
+
+  <Step title="Update Mods (Desktop Mode)">
+    Periodically return to Desktop Mode to:
+    - Check for mod updates
+    - Install new mods
+    - Remove unwanted mods
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Mod Manager Won't Launch in Game Mode
+
+**Issue**: Added as non-Steam game but doesn't start
+
+**Solution**:
+
+1. Verify the launch command in Steam Properties:
+   ```
+   Target: /usr/bin/flatpak
+   Launch Options: run io.balatro.ModManager
+   ```
+
+2. Or create a shell script:
+   ```bash
+   #!/bin/bash
+   flatpak run io.balatro.ModManager
+   ```
+   Save as `~/launch-bmm.sh`, make executable:
+   ```bash
+   chmod +x ~/launch-bmm.sh
+   ```
+   Add this script to Steam instead.
+
+### Balatro Not Detected
+
+**Issue**: "Balatro installation not found"
+
+**Solution**:
+
+1. Verify Balatro is installed:
+   ```bash
+   ls ~/.local/share/Steam/steamapps/common/Balatro
+   ```
+
+2. Manually set the path:
+   - Open Balatro Mod Manager
+   - Settings → Installation Path
+   - Browse to: `/home/deck/.local/share/Steam/steamapps/common/Balatro`
+
+### Performance Issues
+
+**Issue**: Slow UI, laggy mod installation
+
+**Solution**:
+
+- **Close other apps** in Desktop Mode (especially browsers)
+- **Use battery power settings**: Settings → Battery → Performance profile
+- **Disable thumbnails**: Settings → Thumbnails → Disable
+- **Clear cache**: Settings → Clear Cache
+
+### Storage Space Warnings
+
+**Issue**: "Not enough space" when installing mods
+
+**Solution**:
+
+1. Check available space:
+   ```bash
+   df -h ~
+   ```
+
+2. Clear shader cache:
+   ```bash
+   rm -rf ~/.local/share/Steam/steamapps/shadercache/*
+   ```
+
+3. Move Steam library to SD card and install mods there
+
+4. Uninstall unused games:
+   - Steam → Storage → Manage Storage
+
+### Mods Don't Load in Game
+
+**Issue**: Installed mods via mod manager but they don't appear in Balatro
+
+**Solution**:
+
+1. Verify mod installation:
+   ```bash
+   ls ~/.var/app/io.balatro.ModManager/config/Balatro/Mods/
+   ```
+
+2. Check if Balatro is using the correct config directory:
+   - Launch Balatro from Desktop Mode
+   - Check in-game mod list
+
+3. Ensure mod loader (Lovely/Balamod) is installed:
+   - Open Balatro Mod Manager
+   - Settings → Mod Loaders → Install Lovely
+
+4. Verify folder permissions:
+   ```bash
+   chmod -R u+rw ~/.var/app/io.balatro.ModManager/config/Balatro/
+   ```
+
+### Flatpak Runtime Issues
+
+**Issue**: "Runtime not found" or missing GNOME Platform 47
+
+**Solution**:
+
+1. Update Flatpak:
+   ```bash
+   flatpak update
+   ```
+
+2. Reinstall runtimes:
+   ```bash
+   flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
+   ```
+
+3. If Flathub remote is missing:
+   ```bash
+   flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+   ```
+
+## Advanced Tips
+
+### Using an External Keyboard
+
+Connect via USB or Bluetooth for easier text input when browsing mods or configuring settings.
+
+### SD Card Storage for Mods
+
+If internal storage is limited:
+
+1. Create a symlink to SD card:
+   ```bash
+   mv ~/.var/app/io.balatro.ModManager/config/Balatro/Mods /run/media/mmcblk0p1/Mods
+   ln -s /run/media/mmcblk0p1/Mods ~/.var/app/io.balatro.ModManager/config/Balatro/Mods
+   ```
+
+2. Grant Flatpak access:
+   ```bash
+   flatpak override --user --filesystem=/run/media io.balatro.ModManager
+   ```
+
+<Warning>
+  SD cards are slower than internal storage. Mod loading times may increase.
+</Warning>
+
+### Updating the Mod Manager
+
+To update to a new release:
+
+```bash
+# Download new Flatpak bundle
+cd ~/Downloads
+wget https://github.com/skyline69/balatro-mod-manager/releases/latest/download/balatro-mod-manager.flatpak
+
+# Reinstall
+flatpak install --user --reinstall balatro-mod-manager.flatpak
+```
+
+### SSH Access (Advanced)
+
+Enable SSH to manage the Deck remotely:
+
+```bash
+# Set a password for the deck user
+passwd
+
+# Enable SSH
+sudo systemctl start sshd
+sudo systemctl enable sshd
+
+# Connect from another machine
+ssh deck@<DECK_IP_ADDRESS>
+```
+
+Then install/manage mods via SSH without Desktop Mode.
+
+## Performance Optimization
+
+### Reduce Background Processes
+
+Before launching Balatro with mods:
+
+```bash
+# Disable automatic updates
+steamctl settings set AutoUpdateEnabled false
+
+# Close Steam (Desktop Mode)
+steamctl stop
+```
+
+### Adjust Swap Settings (Advanced)
+
+For large mod collections:
+
+```bash
+# Check current swap
+free -h
+
+# Increase swappiness temporarily
+sudo sysctl vm.swappiness=60
+```
+
+<Warning>
+  Modifying system settings may affect stability. Revert if you experience issues.
+</Warning>
+
+## Uninstallation
+
+To remove Balatro Mod Manager from Steam Deck:
+
+```bash
+# Uninstall Flatpak
+flatpak uninstall --delete-data io.balatro.ModManager
+
+# Clean up data
+rm -rf ~/.var/app/io.balatro.ModManager
+
+# Remove non-Steam game entry
+# (Do manually in Desktop Mode Steam)
+```
+
+<Note>
+  Uninstalling the mod manager does **not** remove installed mods. To remove mods:
+  ```bash
+  rm -rf ~/.var/app/io.balatro.ModManager/config/Balatro/Mods/*
+  ```
+</Note>
+
+## See Also
+
+- [Linux Installation (General)](/platform/linux)
+- [Getting Started Guide](/quickstart)
+- [Installing Mods](/guide/installing-mods)
+- [Troubleshooting](/troubleshooting/common-issues)

@@ -1,0 +1,578 @@
+---
+title: Installing Your First Mod
+description: Step-by-step guide to browsing, installing, and managing your first Balatro mod
+---
+
+# Installing Your First Mod
+
+This guide will walk you through the complete process of installing your first Balatro mod using Balatro Mod Manager.
+
+<Note>
+  Before starting, make sure you've completed the [Quick Start](/quickstart) guide and have Lovely mod loader installed.
+</Note>
+
+## Understanding Mods
+
+Before diving in, let's understand what Balatro mods are and what they can do.
+
+### Types of Mods
+
+Balatro mods generally fall into these categories:
+
+<CardGroup cols={2}>
+  <Card title="Gameplay Mods" icon="gamepad">
+    Add new jokers, cards, mechanics, or change game balance and rules.
+  </Card>
+  <Card title="Cosmetic Mods" icon="palette">
+    Change visuals, card designs, UI themes, or add new artwork.
+  </Card>
+  <Card title="Frameworks" icon="code">
+    Libraries and tools that other mods depend on (like Steamodded).
+  </Card>
+  <Card title="Quality of Life" icon="star">
+    Add features like improved UI, statistics tracking, or gameplay conveniences.
+  </Card>
+</CardGroup>
+
+### Mod Dependencies
+
+Most mods require one or more of these frameworks:
+
+- **Lovely**: The core mod loader (you already have this installed)
+- **Steamodded**: The most popular mod framework, required by most gameplay mods
+- **Talisman**: API for adding custom decks and special cards
+
+Don't worry - BMM automatically installs dependencies for you!
+
+---
+
+## Browsing the Mod Catalog
+
+Let's explore the available mods and find one to install.
+
+<Steps>
+  <Step title="Open the Mods Section">
+    If you're not already there, click **Mods** in the sidebar navigation.
+    
+    You'll see a grid of mod cards, each displaying:
+    - A thumbnail image
+    - Mod name and author
+    - Brief description
+    - Install button
+    
+    <img className="block" src="/images/mod-catalog.png" alt="Mod catalog view" />
+  </Step>
+  
+  <Step title="Browse or Search">
+    You can find mods in several ways:
+    
+    **Browse All Mods**
+    - Scroll through the catalog to see what's available
+    - Use the pagination at the bottom to view more pages
+    
+    **Search by Name**
+    - Type in the search bar at the top
+    - Results filter in real-time
+    - Example: Search for "Steamodded" to find the popular framework
+    
+    **Filter by Category**
+    - Click category tabs to filter:
+      - All
+      - Gameplay
+      - Cosmetic  
+      - Frameworks
+      - Installed
+      - Updates Available
+  </Step>
+  
+  <Step title="View Mod Details">
+    Click on any mod card to see detailed information:
+    - Full description
+    - Author and version
+    - Dependencies required
+    - Installation count
+    - Update history
+    - Screenshots (if available)
+    
+    <img className="block" src="/images/mod-details.png" alt="Mod detail view" />
+  </Step>
+</Steps>
+
+<Tip>
+  **Recommended First Mod**: We recommend starting with **Steamodded** - it's a framework that many other mods depend on, and it includes useful features on its own.
+</Tip>
+
+---
+
+## Installing a Mod
+
+Let's install Steamodded as your first mod. The process is the same for any mod.
+
+### Step-by-Step Installation
+
+<Steps>
+  <Step title="Find Steamodded">
+    - Use the search bar and type "Steamodded"
+    - Or scroll through the catalog to find it
+    - Click on the Steamodded mod card
+  </Step>
+  
+  <Step title="Review Mod Information">
+    Before installing, review:
+    - **Description**: What the mod does
+    - **Dependencies**: What else needs to be installed
+    - **Version**: Current version number
+    - **Compatibility**: Any known compatibility notes
+    
+    Steamodded requires only Lovely, which you already have installed.
+  </Step>
+  
+  <Step title="Click Install">
+    Click the green **Install** button.
+    
+    <img className="block" src="/images/install-button.png" alt="Install button on mod card" />
+  </Step>
+  
+  <Step title="Handle Dependencies (if needed)">
+    If the mod has dependencies you don't have installed, you'll see a popup:
+    
+    <img className="block" src="/images/dependency-popup.png" alt="Dependency installation prompt" />
+    
+    The popup shows:
+    - List of required dependencies
+    - What each dependency does
+    - Total download size
+    
+    Click **Install All** to automatically install all dependencies.
+  </Step>
+  
+  <Step title="Wait for Download and Installation">
+    BMM will now:
+    1. Download the mod files
+    2. Verify the download
+    3. Extract files to the correct location
+    4. Configure the mod
+    5. Verify installation
+    
+    You'll see a progress indicator during this process:
+    - Downloading... (with percentage)
+    - Installing...
+    - Verifying...
+    
+    <img className="block" src="/images/install-progress.png" alt="Installation progress indicator" />
+  </Step>
+  
+  <Step title="Installation Complete">
+    Once finished, you'll see:
+    - A success notification: "Steamodded installed successfully"
+    - The Install button changes to **Installed** (green checkmark)
+    - The mod appears in your "Installed" filter
+    
+    <img className="block" src="/images/install-success.png" alt="Installation success notification" />
+  </Step>
+</Steps>
+
+### What Just Happened?
+
+Behind the scenes, BMM:
+
+1. **Downloaded** the mod from a trusted source
+2. **Extracted** the files (usually .zip archives)
+3. **Placed** the mod in `Balatro/Mods/` directory
+4. **Registered** the mod in BMM's database
+5. **Verified** the installation was successful
+
+---
+
+## Verifying the Installation
+
+Let's make sure your mod is installed correctly.
+
+<Steps>
+  <Step title="Check Installed Mods List">
+    1. Click the **Installed** filter tab
+    2. You should see Steamodded (and Lovely) listed
+    3. Each installed mod shows:
+       - Green checkmark indicating it's active
+       - Version number
+       - Update status
+  </Step>
+  
+  <Step title="View in File System (Optional)">
+    If you want to see the actual files:
+    
+    **Windows**: `C:\Users\[YourName]\AppData\Roaming\Balatro\Mods\`
+    
+    **macOS**: `~/Library/Application Support/Balatro/Mods/`
+    
+    **Linux**: `~/.local/share/Balatro/Mods/`
+    
+    You should see a folder named `Steamodded` with Lua files inside.
+  </Step>
+  
+  <Step title="Launch Balatro">
+    Click the **Launch Balatro** button at the top of BMM.
+    
+    When Balatro starts:
+    1. Watch for the Lovely logo on the title screen
+    2. You should see a "Steamodded" indicator or menu
+    3. The mod is now active in your game!
+  </Step>
+</Steps>
+
+<Info>
+  **First Launch Note**: The first time you launch Balatro after installing mods, it may take a few extra seconds as Lovely and your mods initialize.
+</Info>
+
+---
+
+## Installing Additional Mods
+
+Now that you have Steamodded installed, you can install mods that depend on it.
+
+### Finding Compatible Mods
+
+Many popular mods require Steamodded. Here are some beginner-friendly options:
+
+<CardGroup cols={2}>
+  <Card title="Joker Mods" icon="clubs">
+    Add new jokers with unique abilities and synergies.
+    Examples: Custom Jokers Pack, More Jokers
+  </Card>
+  <Card title="Deck Mods" icon="cards">
+    Add new starting decks with special rules.
+    Examples: Custom Deck Collections (requires Talisman)
+  </Card>
+  <Card title="Visual Mods" icon="eye">
+    Change card appearance, UI, or add effects.
+    Examples: Pixel Art Cards, Alternate Card Designs
+  </Card>
+  <Card title="Balance Mods" icon="scale">
+    Adjust game difficulty or mechanics.
+    Examples: Harder Challenges, More Balanced Jokers
+  </Card>
+</CardGroup>
+
+### Installation Process
+
+The process is identical to what you just did:
+
+<Steps>
+  <Step title="Find a Mod">
+    Browse or search for a mod you want to try.
+  </Step>
+  
+  <Step title="Check Dependencies">
+    Look at the mod card to see what it requires. If you have Steamodded, you can install most mods.
+  </Step>
+  
+  <Step title="Install">
+    Click **Install** and BMM handles the rest.
+  </Step>
+  
+  <Step title="Test in Game">
+    Launch Balatro to try your new mod.
+  </Step>
+</Steps>
+
+<Tip>
+  **Recommendation**: Install mods one at a time and test them in-game before adding more. This makes it easier to identify any issues or conflicts.
+</Tip>
+
+---
+
+## Managing Your Installed Mods
+
+Now that you have mods installed, here's how to manage them.
+
+### Updating Mods
+
+<Steps>
+  <Step title="Check for Updates">
+    BMM automatically checks for mod updates when you launch it.
+    
+    Mods with updates available show:
+    - An **Update Available** badge
+    - A blue **Update** button
+    - Version number comparison (e.g., "1.0.0 → 1.1.0")
+  </Step>
+  
+  <Step title="Update Individual Mods">
+    Click **Update** on any mod card to update just that mod.
+  </Step>
+  
+  <Step title="Update All Mods">
+    Click **Update All** at the top of the page to update all mods at once.
+  </Step>
+</Steps>
+
+<Warning>
+  After updating mods, restart Balatro if it's already running. Updated mods won't take effect until the game is relaunched.
+</Warning>
+
+### Disabling Mods Temporarily
+
+Sometimes you want to turn off a mod without uninstalling it:
+
+<Steps>
+  <Step title="Find the Mod">
+    Go to the **Installed** tab and find the mod you want to disable.
+  </Step>
+  
+  <Step title="Click Disable">
+    Click the **Disable** button (or toggle switch, depending on your BMM version).
+    
+    The mod will:
+    - Stay installed on your system
+    - Not load when you launch Balatro
+    - Show as "Disabled" in BMM
+  </Step>
+  
+  <Step title="Re-enable When Ready">
+    Click **Enable** to turn the mod back on.
+  </Step>
+</Steps>
+
+### Uninstalling Mods
+
+If you want to completely remove a mod:
+
+<Steps>
+  <Step title="Open Uninstall Dialog">
+    Click the **Uninstall** button on the mod card.
+  </Step>
+  
+  <Step title="Review Dependencies">
+    BMM will show:
+    - Which mods depend on this one
+    - Warning if uninstalling will break other mods
+    - Option to uninstall dependents too
+    
+    <img className="block" src="/images/uninstall-dialog.png" alt="Uninstall confirmation dialog" />
+  </Step>
+  
+  <Step title="Confirm Uninstallation">
+    Click **Uninstall** to confirm.
+    
+    BMM will:
+    - Remove all mod files
+    - Clean up any configuration
+    - Update the mod database
+    - Show a success message
+  </Step>
+</Steps>
+
+<Info>
+  **Clean Uninstallation**: BMM tracks exactly what files belong to each mod, so uninstalling removes only those files and doesn't affect other mods.
+</Info>
+
+---
+
+## Working with Mod Collections
+
+Mod collections are curated sets of compatible mods that work well together.
+
+### Installing a Collection
+
+<Steps>
+  <Step title="Browse Collections">
+    Click the **Collections** tab in the mod catalog.
+    
+    Collections show:
+    - Collection name and description
+    - Number of mods included
+    - Total download size
+    - Compatibility notes
+  </Step>
+  
+  <Step title="View Collection Contents">
+    Click on a collection to see:
+    - Full list of included mods
+    - What each mod does
+    - Combined dependencies
+  </Step>
+  
+  <Step title="Install the Collection">
+    Click **Install Collection**.
+    
+    BMM will:
+    - Download all mods in the collection
+    - Install them in the correct order
+    - Handle all dependencies
+    - Verify compatibility
+  </Step>
+</Steps>
+
+<Tip>
+  Collections are great for:
+  - Trying themed mod sets (e.g., "Difficulty Overhaul", "Visual Enhancement Pack")
+  - Getting started with compatible mods
+  - Saving time on finding compatible mods
+</Tip>
+
+---
+
+## Troubleshooting Common Issues
+
+Here are solutions to common problems you might encounter:
+
+### Mod Doesn't Appear In-Game
+
+<Steps>
+  <Step title="Verify Installation">
+    - Check that the mod shows as "Installed" in BMM
+    - Make sure it's enabled (not disabled)
+  </Step>
+  
+  <Step title="Check Dependencies">
+    - Ensure all required dependencies are installed
+    - Update Steamodded and Lovely to latest versions
+  </Step>
+  
+  <Step title="Restart Balatro">
+    - Completely close and relaunch Balatro
+    - Mods only load on game startup
+  </Step>
+  
+  <Step title="Check Load Order">
+    - Some mods must load in a specific order
+    - BMM handles this automatically, but you can verify in Settings > Advanced
+  </Step>
+</Steps>
+
+### Installation Fails
+
+<Steps>
+  <Step title="Check Internet Connection">
+    - Ensure you have a stable internet connection
+    - Try installing again
+  </Step>
+  
+  <Step title="Verify Disk Space">
+    - Make sure you have enough free disk space
+    - Check both your Balatro installation drive and temp directory
+  </Step>
+  
+  <Step title="Clear Cache">
+    - Go to Settings > Advanced
+    - Click **Clear Cache**
+    - Try installing again
+  </Step>
+  
+  <Step title="Check Permissions">
+    - Ensure BMM has write permissions to the Balatro Mods folder
+    - On Linux/macOS, check file ownership
+    - On Windows, run BMM as administrator if needed
+  </Step>
+</Steps>
+
+### Game Crashes After Installing Mod
+
+<Steps>
+  <Step title="Identify the Problem Mod">
+    - Launch BMM and disable recently installed mods one by one
+    - Launch Balatro after each disable to test
+  </Step>
+  
+  <Step title="Check Compatibility">
+    - Read mod description for compatibility notes
+    - Check if the mod is updated for your Balatro version
+  </Step>
+  
+  <Step title="Report the Issue">
+    - Use the **Report Issue** button in BMM
+    - Include: mod name, error message, and BMM version
+    - Check the mod's page for known issues
+  </Step>
+  
+  <Step title="Create a Backup First">
+    - Before troubleshooting, create a backup of your working setup
+    - This lets you easily restore if needed
+  </Step>
+</Steps>
+
+<Warning>
+  If Balatro won't launch at all after installing mods, you can restore from a backup or manually delete the `Mods` folder to start fresh.
+</Warning>
+
+---
+
+## Best Practices
+
+Follow these tips for the best modding experience:
+
+<CardGroup cols={2}>
+  <Card title="Read Before Installing" icon="book-open">
+    Always read mod descriptions and requirements before installing. This prevents compatibility issues.
+  </Card>
+  
+  <Card title="Start Simple" icon="seedling">
+    Begin with a few popular, well-maintained mods before experimenting with many at once.
+  </Card>
+  
+  <Card title="Keep Backups" icon="shield-check">
+    Create backups before major changes. Name them descriptively (e.g., "Working vanilla setup").
+  </Card>
+  
+  <Card title="Update Regularly" icon="arrow-up">
+    Keep Lovely, Steamodded, and your mods updated for best compatibility and features.
+  </Card>
+  
+  <Card title="Test After Changes" icon="flask">
+    After installing or updating mods, launch Balatro and play a quick test run to ensure everything works.
+  </Card>
+  
+  <Card title="Join the Community" icon="users">
+    Engage with the Balatro modding community to discover new mods and get help when needed.
+  </Card>
+</CardGroup>
+
+---
+
+## Next Steps
+
+Congratulations! You've successfully installed and managed your first Balatro mod. Here's what to explore next:
+
+<CardGroup cols={2}>
+  <Card title="Explore More Mods" href="/guide/browsing-mods">
+    Browse the full mod catalog to discover new content
+  </Card>
+  
+  <Card title="Advanced Management" href="/guide/managing-mods">
+    Learn about load orders, profiles, and advanced mod management
+  </Card>
+  
+  <Card title="Mod Collections" href="/guide/mod-collections">
+    Install curated collections for themed gameplay experiences
+  </Card>
+  
+  <Card title="Troubleshooting Guide" href="/troubleshooting/common-issues">
+    Comprehensive solutions for any issues you encounter
+  </Card>
+</CardGroup>
+
+---
+
+## Getting Help
+
+If you encounter any issues:
+
+<Steps>
+  <Step title="Check Documentation">
+    Search this documentation for answers to common questions.
+  </Step>
+  
+  <Step title="Use Report Issue">
+    Click the **Report Issue** button in BMM to submit a detailed bug report.
+  </Step>
+  
+  <Step title="Visit GitHub">
+    Check the [GitHub Issues](https://github.com/skyline69/balatro-mod-manager/issues) page for known issues and solutions.
+  </Step>
+  
+  <Step title="Join the Community">
+    Engage with the Balatro modding community on Discord or Reddit for community support.
+  </Step>
+</Steps>
+
+Happy modding!

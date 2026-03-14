@@ -1,0 +1,630 @@
+---
+title: Install Commands
+description: Tauri commands for mod installation and management in Balatro Mod Manager
+---
+
+## Overview
+
+The install commands handle all aspects of mod installation, including Steamodded and Talisman framework installation, mod dependency management, and Balatro launch functionality.
+
+---
+
+## launch_balatro
+
+Launches Balatro with or without mods based on the configured launch mode.
+
+### Rust Signature
+
+```rust
+pub async fn launch_balatro(state: tauri::State<'_, AppState>) -> Result<(), String>
+```
+
+<ParamField path="state" type="tauri::State<'_, AppState>" required>
+  Application state containing database and settings
+</ParamField>
+
+### Returns
+
+<ResponseField name="Result" type="Result<(), String>">
+  Returns `Ok(())` on successful launch, or error message if launch fails
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Basic Launch
+import { invoke } from '@tauri-apps/api/core';
+
+const launchBalatro = async () => {
+  try {
+    await invoke('launch_balatro');
+    console.log('Balatro launched successfully');
+  } catch (error) {
+    console.error('Failed to launch Balatro:', error);
+  }
+};
+```
+
+```typescript With Error Handling
+import { invoke } from '@tauri-apps/api/core';
+
+const launchWithRetry = async () => {
+  try {
+    await invoke('launch_balatro');
+  } catch (error) {
+    if (typeof error === 'string' && error.includes('path')) {
+      alert('Balatro installation not found. Please set the path first.');
+    } else {
+      alert(`Launch failed: ${error}`);
+    }
+  }
+};
+```
+</CodeGroup>
+
+<Note>
+  **Platform-specific behavior:**
+  - **Windows**: Launches via `Balatro.exe` with Lovely DLL injection
+  - **macOS**: Launches via LOVE framework with DYLD library injection
+  - **Linux**: Supports both native LOVE and Proton/Wine prefix launches
+</Note>
+
+<Warning>
+  The launch mode (modded/vanilla) is controlled by the `launch_mode` setting. Use `set_launch_mode` to change it before launching.
+</Warning>
+
+---
+
+## install_mod
+
+Installs a mod from a URL or BMI protocol link.
+
+### Rust Signature
+
+```rust
+pub async fn install_mod(
+    state: tauri::State<'_, AppState>,
+    url: String,
+    folder_name: String,
+) -> Result<PathBuf, String>
+```
+
+<ParamField path="state" type="tauri::State<'_, AppState>" required>
+  Application state
+</ParamField>
+
+<ParamField path="url" type="String" required>
+  Download URL or `bmi://` protocol link. For BMI links, the ID will be resolved to a download URL.
+</ParamField>
+
+<ParamField path="folder_name" type="String">
+  Optional custom folder name for the mod. Pass empty string to use default.
+</ParamField>
+
+### Returns
+
+<ResponseField name="path" type="PathBuf">
+  The filesystem path where the mod was installed
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Direct URL
+import { invoke } from '@tauri-apps/api/core';
+
+const installMod = async (url: string) => {
+  try {
+    const path = await invoke<string>('install_mod', {
+      url,
+      folderName: '' // Use default name
+    });
+    console.log(`Mod installed to: ${path}`);
+    return path;
+  } catch (error) {
+    console.error('Installation failed:', error);
+    throw error;
+  }
+};
+```
+
+```typescript BMI Protocol
+const installFromBMI = async (modId: string) => {
+  const bmiUrl = `bmi://${modId}`;
+  
+  try {
+    const path = await invoke<string>('install_mod', {
+      url: bmiUrl,
+      folderName: ''
+    });
+    return path;
+  } catch (error) {
+    if (typeof error === 'string' && error.includes('rate limit')) {
+      // Automatic retry with backoff is handled by the command
+      console.log('Rate limited, retrying...');
+    }
+    throw error;
+  }
+};
+```
+
+```typescript Custom Folder Name
+const installWithCustomName = async (url: string, name: string) => {
+  return await invoke<string>('install_mod', {
+    url,
+    folderName: name
+  });
+};
+```
+</CodeGroup>
+
+<Note>
+  The command automatically retries up to 3 times with exponential backoff if rate limited (HTTP 429).
+</Note>
+
+---
+
+## remove_installed_mod
+
+Removes an installed mod from both the filesystem and database.
+
+### Rust Signature
+
+```rust
+pub async fn remove_installed_mod(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    name: String,
+    path: String,
+) -> Result<(), String>
+```
+
+<ParamField path="name" type="String" required>
+  Name of the mod to remove
+</ParamField>
+
+<ParamField path="path" type="String" required>
+  Filesystem path to the mod directory
+</ParamField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const removeMod = async (modName: string, modPath: string) => {
+  try {
+    await invoke('remove_installed_mod', {
+      name: modName,
+      path: modPath
+    });
+    console.log(`${modName} removed successfully`);
+  } catch (error) {
+    if (typeof error === 'string' && error.includes('cascade_uninstall')) {
+      alert('This is a framework with dependents. Use cascade uninstall.');
+    } else {
+      throw error;
+    }
+  }
+};
+```
+
+<Warning>
+  If removing Steamodded or Talisman frameworks that have dependent mods, this command will fail. Use `cascade_uninstall` instead.
+</Warning>
+
+---
+
+## cascade_uninstall
+
+Uninstalls a mod and all of its dependents recursively.
+
+### Rust Signature
+
+```rust
+pub async fn cascade_uninstall(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    root_mod: String,
+) -> Result<(), String>
+```
+
+<ParamField path="root_mod" type="String" required>
+  Name of the root mod to uninstall (all dependents will also be removed)
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Basic Cascade
+import { invoke } from '@tauri-apps/api/core';
+
+const cascadeUninstall = async (modName: string) => {
+  try {
+    await invoke('cascade_uninstall', { rootMod: modName });
+    console.log(`${modName} and dependents removed`);
+  } catch (error) {
+    console.error('Cascade uninstall failed:', error);
+  }
+};
+```
+
+```typescript With Confirmation
+const safeCascadeUninstall = async (modName: string) => {
+  // Get dependents first to show user
+  const dependents = await invoke<string[]>('get_dependents', { modName });
+  
+  if (dependents.length > 0) {
+    const confirm = window.confirm(
+      `This will also remove ${dependents.length} dependent mods: ${dependents.join(', ')}. Continue?`
+    );
+    if (!confirm) return;
+  }
+  
+  await invoke('cascade_uninstall', { rootMod: modName });
+};
+```
+</CodeGroup>
+
+---
+
+## get_dependents
+
+Gets a list of all mods that depend on the specified mod.
+
+### Rust Signature
+
+```rust
+pub async fn get_dependents(mod_name: String) -> Result<Vec<String>, String>
+```
+
+<ParamField path="mod_name" type="String" required>
+  Name of the mod to check for dependents
+</ParamField>
+
+### Returns
+
+<ResponseField name="dependents" type="Vec<String>">
+  List of mod names that depend on this mod (excluding the mod itself)
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const checkDependents = async (modName: string) => {
+  const dependents = await invoke<string[]>('get_dependents', { modName });
+  
+  if (dependents.length > 0) {
+    console.log(`${modName} has ${dependents.length} dependents:`, dependents);
+  } else {
+    console.log(`${modName} has no dependents`);
+  }
+  
+  return dependents;
+};
+```
+
+---
+
+## install_steamodded_version
+
+Installs a specific version of the Steamodded framework.
+
+### Rust Signature
+
+```rust
+pub async fn install_steamodded_version(
+    state: tauri::State<'_, AppState>,
+    version: String,
+) -> Result<String, String>
+```
+
+<ParamField path="version" type="String" required>
+  Version tag to install (e.g., "1.0.0-ALPHA-0906a")
+</ParamField>
+
+### Returns
+
+<ResponseField name="path" type="String">
+  Installation path of Steamodded
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Install Specific Version
+import { invoke } from '@tauri-apps/api/core';
+
+const installSteamodded = async (version: string) => {
+  try {
+    const path = await invoke<string>('install_steamodded_version', { version });
+    console.log(`Steamodded ${version} installed to: ${path}`);
+    return path;
+  } catch (error) {
+    console.error('Steamodded installation failed:', error);
+    throw error;
+  }
+};
+```
+
+```typescript With Version List
+const installLatestSteamodded = async () => {
+  // Get available versions first
+  const versions = await invoke<string[]>('get_steamodded_versions');
+  
+  if (versions.length > 0) {
+    // First version is usually the latest
+    return await invoke<string>('install_steamodded_version', {
+      version: versions[0]
+    });
+  }
+};
+```
+</CodeGroup>
+
+---
+
+## get_steamodded_versions
+
+Retrieves all available Steamodded versions from GitHub.
+
+### Rust Signature
+
+```rust
+pub async fn get_steamodded_versions() -> Result<Vec<String>, String>
+```
+
+### Returns
+
+<ResponseField name="versions" type="Vec<String>">
+  List of version tags, sorted by release date (newest first)
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const fetchSteamoddedVersions = async () => {
+  const versions = await invoke<string[]>('get_steamodded_versions');
+  console.log('Available versions:', versions);
+  return versions;
+};
+```
+
+---
+
+## install_talisman_version
+
+Installs a specific version of the Talisman framework.
+
+### Rust Signature
+
+```rust
+pub async fn install_talisman_version(
+    state: tauri::State<'_, AppState>,
+    version: String,
+) -> Result<String, String>
+```
+
+<ParamField path="version" type="String" required>
+  Version tag to install
+</ParamField>
+
+### Returns
+
+<ResponseField name="path" type="String">
+  Installation path of Talisman
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const installTalisman = async (version: string) => {
+  const path = await invoke<string>('install_talisman_version', { version });
+  console.log(`Talisman ${version} installed to: ${path}`);
+  return path;
+};
+```
+
+---
+
+## get_talisman_versions
+
+Retrieves all available Talisman versions from GitHub.
+
+### Rust Signature
+
+```rust
+pub async fn get_talisman_versions() -> Result<Vec<String>, String>
+```
+
+### Returns
+
+<ResponseField name="versions" type="Vec<String>">
+  List of version tags
+</ResponseField>
+
+### TypeScript Usage
+
+```typescript
+const fetchTalismanVersions = async () => {
+  return await invoke<string[]>('get_talisman_versions');
+};
+```
+
+---
+
+## get_installed_mods_from_db
+
+Retrieves all installed mods from the database.
+
+### Rust Signature
+
+```rust
+pub async fn get_installed_mods_from_db(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<InstalledMod>, String>
+```
+
+### Returns
+
+<ResponseField name="mods" type="Vec<InstalledMod>">
+  Array of installed mod objects
+  <Expandable title="InstalledMod fields">
+    <ResponseField name="name" type="string">
+      Display name of the mod
+    </ResponseField>
+    <ResponseField name="path" type="string">
+      Filesystem path to the mod directory
+    </ResponseField>
+    <ResponseField name="dependencies" type="string[]">
+      List of dependency mod names
+    </ResponseField>
+    <ResponseField name="current_version" type="string | null">
+      Currently installed version, if known
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Basic Fetch
+import { invoke } from '@tauri-apps/api/core';
+
+interface InstalledMod {
+  name: string;
+  path: string;
+  dependencies: string[];
+  current_version: string | null;
+}
+
+const getInstalledMods = async () => {
+  const mods = await invoke<InstalledMod[]>('get_installed_mods_from_db');
+  console.log(`Found ${mods.length} installed mods`);
+  return mods;
+};
+```
+
+```typescript Filter by Framework
+const getFrameworkMods = async () => {
+  const allMods = await invoke<InstalledMod[]>('get_installed_mods_from_db');
+  
+  return allMods.filter(mod => 
+    mod.name.toLowerCase() === 'steamodded' || 
+    mod.name.toLowerCase() === 'talisman'
+  );
+};
+```
+</CodeGroup>
+
+---
+
+## add_installed_mod
+
+Adds a mod to the database (typically used after manual installation).
+
+### Rust Signature
+
+```rust
+pub async fn add_installed_mod(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    name: String,
+    path: String,
+    dependencies: Vec<String>,
+    current_version: String,
+) -> Result<(), String>
+```
+
+<ParamField path="name" type="String" required>
+  Name of the mod
+</ParamField>
+
+<ParamField path="path" type="String" required>
+  Filesystem path to the mod
+</ParamField>
+
+<ParamField path="dependencies" type="Vec<String>" required>
+  List of dependency mod names
+</ParamField>
+
+<ParamField path="current_version" type="String">
+  Version string (pass empty for unknown)
+</ParamField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const registerMod = async (
+  name: string,
+  path: string,
+  deps: string[] = [],
+  version: string = ''
+) => {
+  await invoke('add_installed_mod', {
+    name,
+    path,
+    dependencies: deps,
+    currentVersion: version
+  });
+  
+  console.log(`${name} registered in database`);
+};
+```
+
+<Note>
+  This command triggers the `installed-mods-changed` event for UI synchronization.
+</Note>
+
+---
+
+## force_remove_mod
+
+Force removes a mod, bypassing dependency checks.
+
+### Rust Signature
+
+```rust
+pub async fn force_remove_mod(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    name: String,
+    path: String,
+) -> Result<(), String>
+```
+
+<ParamField path="name" type="String" required>
+  Mod name to remove
+</ParamField>
+
+<ParamField path="path" type="String" required>
+  Mod path to remove
+</ParamField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const forceRemove = async (name: string, path: string) => {
+  const confirm = window.confirm(
+    `Force remove ${name}? This bypasses dependency checks and may break other mods.`
+  );
+  
+  if (confirm) {
+    await invoke('force_remove_mod', { name, path });
+  }
+};
+```
+
+<Warning>
+  Use with caution - this can break dependent mods.
+</Warning>

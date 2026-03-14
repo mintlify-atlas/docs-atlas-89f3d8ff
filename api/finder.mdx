@@ -1,0 +1,477 @@
+---
+title: 'Finder'
+description: 'Automatic Balatro installation path detection across platforms'
+---
+
+The `Finder` module provides functions to locate Balatro game installations across different platforms and store types. It supports Steam, Flatpak, Proton prefixes, and custom installation paths with intelligent caching.
+
+## Detection Strategy
+
+The finder uses a multi-step approach:
+
+1. **User-configured path** from database (highest priority)
+2. **Steam library folders** via `libraryfolders.vdf`
+3. **Common installation directories**
+4. **Registry entries** (Windows only)
+5. **Flatpak/Snap paths** (Linux only)
+
+## Primary Functions
+
+### get_balatro_paths_cached()
+
+Returns cached Balatro paths if available and not expired, otherwise performs a fresh scan.
+
+```rust
+pub fn get_balatro_paths_cached() -> Vec<PathBuf>
+```
+
+<ResponseField name="Returns" type="Vec<PathBuf>">
+  List of detected Balatro installation paths
+</ResponseField>
+
+**Cache Behavior**:
+- **TTL**: 5 minutes (300 seconds)
+- **Thread-safe**: Uses `RwLock` for concurrent access
+- **Automatic refresh**: Stale cache triggers background scan
+
+**Example**:
+
+```rust
+use bmm_lib::finder::get_balatro_paths_cached;
+
+let paths = get_balatro_paths_cached();
+if paths.is_empty() {
+    println!("Balatro not found!");
+} else {
+    println!("Found installations:");
+    for path in paths {
+        println!("  - {}", path.display());
+    }
+}
+```
+
+### invalidate_balatro_paths_cache()
+
+Forces a fresh scan on the next call by invalidating the cache.
+
+```rust
+pub fn invalidate_balatro_paths_cache()
+```
+
+**Use Cases**:
+- User changes installation path
+- After installing/uninstalling Steam
+- When detection fails and user wants to retry
+
+**Example**:
+
+```rust
+use bmm_lib::finder::invalidate_balatro_paths_cache;
+use bmm_lib::database::Database;
+
+// User sets custom path
+let db = Database::new()?;
+db.set_installation_path("/custom/path/to/Balatro")?;
+
+// Force cache refresh
+invalidate_balatro_paths_cache();
+```
+
+### get_balatro_paths()
+
+Performs an uncached scan for Balatro installations.
+
+```rust
+pub fn get_balatro_paths() -> Vec<PathBuf>
+```
+
+<Note>
+Prefer `get_balatro_paths_cached()` for most use cases to avoid repeated filesystem scans.
+</Note>
+
+## Platform-Specific Detection
+
+### Windows
+
+**Detection Sources** (finder.rs:103-196):
+
+1. **Database**: Custom user path
+2. **Registry**: `HKLM\SOFTWARE\WOW6432Node\Valve\Steam\InstallPath`
+3. **libraryfolders.vdf**: Parse Steam library paths
+4. **Default**: `C:\Program Files (x86)\Steam` fallback
+
+**Registry Reading** (finder.rs:104-109):
+```rust
+fn read_path_from_registry() -> Result<String, std::io::Error> {
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let steam_path = hklm.open_subkey("SOFTWARE\\WOW6432Node\\Valve\\Steam")?;
+    Ok(steam_path.get_value("InstallPath")?)
+}
+```
+
+**libraryfolders.vdf Parsing**:
+```rust
+// Extracts paths from lines like:
+// "path"    "D:\\SteamLibrary"
+for line in lines {
+    if line.contains("\t\t\"path\"\t\t") {
+        let path = parts[3];
+        paths.push(PathBuf::from(path).join("steamapps\\common\\Balatro"));
+    }
+}
+```
+
+### macOS
+
+**Detection Sources** (finder.rs:207-232):
+
+1. **Database**: Custom user path
+2. **Standard Steam**: `~/Library/Application Support/Steam/steamapps/common/Balatro`
+
+**Example Path**:
+```
+/Users/username/Library/Application Support/Steam/steamapps/common/Balatro
+```
+
+### Linux
+
+Most comprehensive detection with support for native Steam, Flatpak, Snap, and Proton.
+
+**Detection Sources** (finder.rs:320-445):
+
+1. **Database**: Custom user path
+2. **Native Steam**: `~/.local/share/Steam`, `~/.steam/steam`, etc.
+3. **Flatpak Steam**: `~/.var/app/com.valvesoftware.Steam/data/Steam`
+4. **Snap Steam**: `~/snap/steam/common/.local/share/Steam`
+5. **System paths**: `/opt/steam`, `/usr/lib/steam`, `/var/lib/steam`
+6. **Mounted drives**: `/run/media/$USER/*`
+7. **libraryfolders.vdf**: All discovered Steam library folders
+
+<Expandable title="Linux Detection Details">
+
+**Steam Root Discovery**:
+```rust
+let mut steam_roots: Vec<PathBuf> = Vec::new();
+
+// Native installations
+steam_roots.push(home.join(".local/share/Steam"));
+steam_roots.push(home.join(".steam/steam"));
+steam_roots.push(home.join(".steam/root"));
+
+// Flatpak installations
+steam_roots.push(home.join(".var/app/com.valvesoftware.Steam/data/Steam"));
+steam_roots.push(home.join(".var/app/com.valvesoftware.Steam/.local/share/Steam"));
+
+// Snap installations
+steam_roots.push(home.join("snap/steam/common/.local/share/Steam"));
+```
+
+**Flatpak Sandbox Handling** (finder.rs:367-382):
+```rust
+if std::env::var("FLATPAK_ID").is_ok() {
+    // Running inside Flatpak sandbox
+    if let Ok(user) = std::env::var("USER") {
+        let host_home = PathBuf::from("/var/home").join(&user);
+        // Check host paths from inside sandbox
+    }
+}
+```
+
+**Breadth-First Search** for `steamapps` directories (finder.rs:264-317):
+```rust
+fn scan_for_steamapps_dirs(base: &Path, max_depth: usize, max_dirs: usize) -> Vec<PathBuf>
+```
+
+Searches common locations with limits:
+- `max_depth=5` for home directories
+- `max_depth=4` for `/run/media`
+- Skips: `node_modules`, `.git`, `cache`, `trash`
+- `max_dirs=2000` for home, `1500` for media
+
+</Expandable>
+
+## Process Detection
+
+### is_balatro_running()
+
+Checks if Balatro is currently running.
+
+```rust
+pub fn is_balatro_running() -> bool
+```
+
+<ResponseField name="Returns" type="bool">
+  `true` if Balatro process is detected
+</ResponseField>
+
+**Platform Implementation**:
+
+**Windows** (finder.rs:513-534):
+```rust
+let system = System::new_all();
+// Check exact process name
+if system.processes_by_exact_name(OsStr::new("Balatro.exe")).next().is_some() {
+    return true;
+}
+// Check for name variants
+for process in system.processes().values() {
+    if name.contains("balatro") && !name.contains("balatro-mod") {
+        return true;
+    }
+}
+```
+
+**Unix** (finder.rs:536-629):
+```rust
+// macOS: Check Balatro.app paths
+if proc_path.to_string_lossy().contains("balatro.app") {
+    return true;
+}
+
+// Linux: Check process names and working directories
+if name_lower.contains("balatro") {
+    return true;
+}
+
+// Special case: LOVE processes in Balatro directory
+if name_lower == "love" {
+    let cwd = std::fs::read_link(format!("/proc/{pid}/cwd"))?;
+    if balatro_roots.contains(&cwd) {
+        return true;
+    }
+}
+```
+
+<Warning>
+Filters out mod manager processes to avoid false positives:
+- `balatro-mod-manager`
+- `balatro mod manager`
+- `balatro_mod`
+- `bmm`
+</Warning>
+
+### is_steam_running()
+
+Checks if Steam is currently running.
+
+```rust
+pub fn is_steam_running() -> bool
+```
+
+**Windows**:
+```rust
+let system = System::new_all();
+system.processes_by_exact_name(OsStr::new("steam.exe")).next().is_some()
+```
+
+**Unix**:
+```rust
+if let Ok(pids) = processes::pids_by_type(ProcFilter::All) {
+    for pid in pids {
+        if name(pid)?.to_lowercase().contains("steam") {
+            return true;
+        }
+    }
+}
+```
+
+## Installed Mods Detection
+
+### get_installed_mods()
+
+Returns paths to all installed mod directories.
+
+```rust
+pub fn get_installed_mods() -> Vec<String>
+```
+
+<ResponseField name="Returns" type="Vec<String>">
+  List of mod directory paths as strings
+</ResponseField>
+
+**Filtering** (finder.rs:502-509):
+- Excludes `.lovely` directory
+- Excludes `lovely` directory
+- Excludes `bmm-compat` directory
+- Only includes directories (not files)
+
+**Example**:
+
+```rust
+use bmm_lib::finder::get_installed_mods;
+
+let mods = get_installed_mods();
+for mod_path in mods {
+    println!("Found mod: {}", mod_path);
+}
+```
+
+## Cache Implementation Details
+
+### Cache Structure
+
+```rust
+struct CachedPaths {
+    paths: Vec<PathBuf>,
+    cached_at: Instant,
+}
+
+static BALATRO_PATHS_CACHE: Lazy<RwLock<Option<CachedPaths>>> = Lazy::new(|| RwLock::new(None));
+const BALATRO_PATHS_CACHE_TTL: Duration = Duration::from_secs(300); // 5 minutes
+```
+
+### Cache Access Pattern
+
+**Read Path** (finder.rs:60-67):
+```rust
+if let Ok(guard) = BALATRO_PATHS_CACHE.read()
+    && let Some(cached) = guard.as_ref()
+    && cached.cached_at.elapsed() < BALATRO_PATHS_CACHE_TTL
+{
+    return cached.paths.clone();
+}
+```
+
+**Write Path** (finder.rs:70-85):
+```rust
+if let Ok(mut guard) = BALATRO_PATHS_CACHE.write() {
+    // Double-check after acquiring write lock (prevents races)
+    if let Some(cached) = guard.as_ref()
+        && cached.cached_at.elapsed() < BALATRO_PATHS_CACHE_TTL
+    {
+        return cached.paths.clone();
+    }
+    let paths = get_balatro_paths();
+    *guard = Some(CachedPaths { paths: paths.clone(), cached_at: Instant::now() });
+    return paths;
+}
+```
+
+## Helper Functions
+
+### dedup_paths_case_insensitive()
+
+Removes duplicate paths using case-insensitive comparison.
+
+```rust
+fn dedup_paths_case_insensitive(paths: &mut Vec<PathBuf>)
+```
+
+**Implementation** (finder.rs:198-205):
+```rust
+let mut seen: HashSet<String> = HashSet::new();
+paths.retain(|p| {
+    let canon = p.canonicalize().unwrap_or_else(|_| p.to_path_buf());
+    let key = canon.to_string_lossy().to_string().to_lowercase();
+    seen.insert(key)  // Returns false if already present
+});
+```
+
+### remove_unexisting_paths()
+
+Filters out paths that don't exist on the filesystem.
+
+```rust
+fn remove_unexisting_paths(paths: &mut Vec<PathBuf>)
+```
+
+**Implementation** (finder.rs:111-120):
+```rust
+let mut i = 0;
+while i < paths.len() {
+    if !paths[i].exists() {
+        paths.remove(i);
+    } else {
+        i += 1;
+    }
+}
+```
+
+### parse_libraryfolders() (Linux)
+
+Parses Steam's `libraryfolders.vdf` file using regex.
+
+```rust
+fn parse_libraryfolders(library_path: &Path) -> Vec<PathBuf>
+```
+
+**Regex Pattern** (finder.rs:250):
+```rust
+let re = Regex::new(r#""path"\s*"([^"]+)""#).unwrap();
+```
+
+**Matches Lines Like**:
+```
+"path"    "/mnt/games/SteamLibrary"
+"path"    "/home/user/.local/share/Steam"
+```
+
+## Error Handling
+
+The finder module uses defensive programming:
+
+- **No panics**: All operations gracefully handle errors
+- **Fallback behavior**: Returns empty vector on failure
+- **Logging**: Errors logged with `log::error!` for debugging
+- **Best-effort**: Partial results returned if some paths fail
+
+**Example Error Handling**:
+```rust
+if !mod_dir.exists() {
+    return vec![];
+}
+
+match mod_dir.read_dir() {
+    Ok(read_dir) => { /* process */ },
+    Err(e) => {
+        error!("Failed to read mods directory {}: {}", mod_dir.display(), e);
+        return vec![];
+    }
+}
+```
+
+## Examples
+
+### Basic Path Detection
+
+```rust
+use bmm_lib::finder::get_balatro_paths_cached;
+
+let paths = get_balatro_paths_cached();
+match paths.first() {
+    Some(path) => println!("Balatro found at: {}", path.display()),
+    None => println!("Balatro not found"),
+}
+```
+
+### Custom Path with Cache Invalidation
+
+```rust
+use bmm_lib::database::Database;
+use bmm_lib::finder::{get_balatro_paths_cached, invalidate_balatro_paths_cache};
+
+// Set custom path
+let db = Database::new()?;
+db.set_installation_path("/custom/path")?;
+
+// Invalidate cache to pick up new path
+invalidate_balatro_paths_cache();
+
+let paths = get_balatro_paths_cached();
+assert!(paths.contains(&PathBuf::from("/custom/path")));
+```
+
+### Checking Before Launch
+
+```rust
+use bmm_lib::finder::{is_balatro_running, is_steam_running};
+
+if is_balatro_running() {
+    println!("Please close Balatro before installing mods");
+    return;
+}
+
+if !is_steam_running() {
+    println!("Warning: Steam is not running");
+}
+```

@@ -1,0 +1,415 @@
+---
+title: Mod Commands
+description: Tauri commands for enabling, disabling, and managing mod states in Balatro Mod Manager
+---
+
+## Overview
+
+Mod commands handle enabling/disabling individual mods and querying mod states. These commands work by creating or removing `.lovelyignore` files, which Lovely uses to skip mod loading.
+
+---
+
+## is_mod_enabled
+
+Checks if a specific mod is enabled.
+
+### Rust Signature
+
+```rust
+pub async fn is_mod_enabled(
+    state: tauri::State<'_, AppState>,
+    mod_name: String,
+) -> Result<bool, String>
+```
+
+<ParamField path="mod_name" type="String" required>
+  Name of the mod to check
+</ParamField>
+
+### Returns
+
+<ResponseField name="enabled" type="bool">
+  `true` if the mod is enabled (no `.lovelyignore` file present)
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Check Status
+import { invoke } from '@tauri-apps/api/core';
+
+const checkModStatus = async (modName: string) => {
+  try {
+    const enabled = await invoke<boolean>('is_mod_enabled', { modName });
+    console.log(`${modName} is ${enabled ? 'enabled' : 'disabled'}`);
+    return enabled;
+  } catch (error) {
+    console.error('Failed to check mod status:', error);
+    return false;
+  }
+};
+```
+
+```typescript UI Toggle
+const getModState = async (modName: string) => {
+  const enabled = await invoke<boolean>('is_mod_enabled', { modName });
+  return enabled;
+};
+```
+</CodeGroup>
+
+<Note>
+  A mod is considered "enabled" when there is no `.lovelyignore` file in its directory.
+</Note>
+
+---
+
+## toggle_mod_enabled
+
+Enables or disables a mod by name.
+
+### Rust Signature
+
+```rust
+pub async fn toggle_mod_enabled(
+    state: tauri::State<'_, AppState>,
+    mod_name: String,
+    enabled: bool,
+) -> Result<(), String>
+```
+
+<ParamField path="mod_name" type="String" required>
+  Name of the mod to toggle
+</ParamField>
+
+<ParamField path="enabled" type="bool" required>
+  `true` to enable, `false` to disable
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Toggle Mod
+import { invoke } from '@tauri-apps/api/core';
+
+const toggleMod = async (modName: string, enabled: boolean) => {
+  try {
+    await invoke('toggle_mod_enabled', { modName, enabled });
+    console.log(`${modName} ${enabled ? 'enabled' : 'disabled'}`);
+  } catch (error) {
+    console.error('Failed to toggle mod:', error);
+    throw error;
+  }
+};
+```
+
+```typescript Checkbox Handler
+const handleModToggle = async (checkbox: HTMLInputElement, modName: string) => {
+  const enabled = checkbox.checked;
+  
+  try {
+    await invoke('toggle_mod_enabled', { modName, enabled });
+  } catch (error) {
+    // Revert checkbox on error
+    checkbox.checked = !enabled;
+    alert(`Failed to toggle ${modName}: ${error}`);
+  }
+};
+```
+</CodeGroup>
+
+<Note>
+  When disabling, `.lovelyignore` files are created in the mod directory and all subdirectories. When enabling, all `.lovelyignore` files are removed.
+</Note>
+
+---
+
+## is_mod_enabled_by_path
+
+Checks if a mod is enabled using its filesystem path.
+
+### Rust Signature
+
+```rust
+pub async fn is_mod_enabled_by_path(mod_path: String) -> Result<bool, String>
+```
+
+<ParamField path="mod_path" type="String" required>
+  Filesystem path to the mod directory
+</ParamField>
+
+### Returns
+
+<ResponseField name="enabled" type="bool">
+  `true` if the mod is enabled
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Check by Path
+import { invoke } from '@tauri-apps/api/core';
+
+const checkModByPath = async (path: string) => {
+  const enabled = await invoke<boolean>('is_mod_enabled_by_path', { modPath: path });
+  return enabled;
+};
+```
+
+```typescript Local Mod Detection
+const getLocalModStatus = async (modPath: string) => {
+  try {
+    const enabled = await invoke<boolean>('is_mod_enabled_by_path', { modPath });
+    return { path: modPath, enabled };
+  } catch (error) {
+    console.error(`Failed to check ${modPath}:`, error);
+    return { path: modPath, enabled: false, error };
+  }
+};
+```
+</CodeGroup>
+
+---
+
+## toggle_mod_enabled_by_path
+
+Enables or disables a mod using its filesystem path.
+
+### Rust Signature
+
+```rust
+pub async fn toggle_mod_enabled_by_path(
+    mod_path: String,
+    enabled: bool
+) -> Result<(), String>
+```
+
+<ParamField path="mod_path" type="String" required>
+  Filesystem path to the mod directory
+</ParamField>
+
+<ParamField path="enabled" type="bool" required>
+  `true` to enable, `false` to disable
+</ParamField>
+
+### TypeScript Usage
+
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const toggleModByPath = async (path: string, enabled: boolean) => {
+  await invoke('toggle_mod_enabled_by_path', { modPath: path, enabled });
+};
+```
+
+<Note>
+  This is useful for managing local/manually installed mods that may not be in the database.
+</Note>
+
+---
+
+## toggle_mods_enabled_batch
+
+Toggles multiple mods in a single operation for better performance.
+
+### Rust Signature
+
+```rust
+pub async fn toggle_mods_enabled_batch(
+    state: tauri::State<'_, AppState>,
+    enabled: Vec<String>,
+    disabled: Vec<String>,
+    local_paths: Option<Vec<String>>,
+) -> Result<(), String>
+```
+
+<ParamField path="enabled" type="Vec<String>" required>
+  List of mod names to enable
+</ParamField>
+
+<ParamField path="disabled" type="Vec<String>" required>
+  List of mod names to disable
+</ParamField>
+
+<ParamField path="local_paths" type="Option<Vec<String>>">
+  Optional list of local mod paths to include in the operation
+</ParamField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Batch Toggle
+import { invoke } from '@tauri-apps/api/core';
+
+const batchToggleMods = async (
+  toEnable: string[],
+  toDisable: string[],
+  localPaths?: string[]
+) => {
+  await invoke('toggle_mods_enabled_batch', {
+    enabled: toEnable,
+    disabled: toDisable,
+    localPaths: localPaths || null
+  });
+};
+```
+
+```typescript Enable All Mods
+const enableAllMods = async (modNames: string[]) => {
+  await invoke('toggle_mods_enabled_batch', {
+    enabled: modNames,
+    disabled: [],
+    localPaths: null
+  });
+};
+```
+
+```typescript Disable All Mods
+const disableAllMods = async (modNames: string[]) => {
+  await invoke('toggle_mods_enabled_batch', {
+    enabled: [],
+    disabled: modNames,
+    localPaths: null
+  });
+};
+```
+
+```typescript Selective Toggle
+const applyModProfile = async (profile: ModProfile) => {
+  const allMods = await getAllModNames();
+  const toEnable = profile.enabledMods;
+  const toDisable = allMods.filter(m => !toEnable.includes(m));
+  
+  await invoke('toggle_mods_enabled_batch', {
+    enabled: toEnable,
+    disabled: toDisable,
+    localPaths: null
+  });
+};
+```
+</CodeGroup>
+
+<Note>
+  This command uses parallel processing for better performance when toggling many mods at once.
+</Note>
+
+---
+
+## enabled_state_map
+
+Retrieves the enabled/disabled state of all mods as a map.
+
+### Rust Signature
+
+```rust
+pub async fn enabled_state_map(
+    state: tauri::State<'_, AppState>,
+    local_paths: Option<Vec<String>>,
+) -> Result<HashMap<String, bool>, String>
+```
+
+<ParamField path="local_paths" type="Option<Vec<String>>">
+  Optional list of local mod paths to include in the result
+</ParamField>
+
+### Returns
+
+<ResponseField name="state_map" type="HashMap<String, bool>">
+  Map of mod names to their enabled state (true = enabled, false = disabled)
+</ResponseField>
+
+### TypeScript Usage
+
+<CodeGroup>
+```typescript Get All States
+import { invoke } from '@tauri-apps/api/core';
+
+const getAllModStates = async () => {
+  const states = await invoke<Record<string, boolean>>('enabled_state_map', {
+    localPaths: null
+  });
+  
+  console.log('Mod states:', states);
+  return states;
+};
+```
+
+```typescript Include Local Mods
+const getModStatesWithLocal = async (localPaths: string[]) => {
+  const states = await invoke<Record<string, boolean>>('enabled_state_map', {
+    localPaths
+  });
+  
+  return states;
+};
+```
+
+```typescript Filter Enabled Mods
+const getEnabledMods = async () => {
+  const states = await invoke<Record<string, boolean>>('enabled_state_map', {
+    localPaths: null
+  });
+  
+  const enabled = Object.entries(states)
+    .filter(([_, isEnabled]) => isEnabled)
+    .map(([name]) => name);
+  
+  console.log('Enabled mods:', enabled);
+  return enabled;
+};
+```
+
+```typescript Count Mods
+const getModCounts = async () => {
+  const states = await invoke<Record<string, boolean>>('enabled_state_map', {
+    localPaths: null
+  });
+  
+  const total = Object.keys(states).length;
+  const enabled = Object.values(states).filter(v => v).length;
+  const disabled = total - enabled;
+  
+  return { total, enabled, disabled };
+};
+```
+</CodeGroup>
+
+<Note>
+  This command is optimized for bulk state queries and includes both database-tracked and local mods.
+</Note>
+
+---
+
+## How Mod Enabling Works
+
+<Expandable title="Understanding .lovelyignore">
+  Lovely (the mod loader for Balatro) uses `.lovelyignore` files to skip loading mods:
+  
+  - **Enabled mod**: No `.lovelyignore` file in the mod directory
+  - **Disabled mod**: `.lovelyignore` file present in mod directory and all subdirectories
+  
+  The mod commands in BMM manage these files automatically:
+  
+  1. **Enabling**: Removes all `.lovelyignore` files from the mod and its subdirectories
+  2. **Disabling**: Creates `.lovelyignore` files in the mod directory and all subdirectories
+  
+  This approach ensures that:
+  - Mods can be toggled without reinstallation
+  - Mod files remain intact when disabled
+  - The state persists across application restarts
+</Expandable>
+
+---
+
+## Performance Considerations
+
+<Warning>
+  When toggling many mods:
+  - Use `toggle_mods_enabled_batch` instead of multiple `toggle_mod_enabled` calls
+  - Batch operations use parallel processing via Rayon for better performance
+  - Reducing round-trips between frontend and backend improves responsiveness
+</Warning>
+
+<Note>
+  For real-time UI updates, use `enabled_state_map` to get all states at once rather than querying each mod individually.
+</Note>

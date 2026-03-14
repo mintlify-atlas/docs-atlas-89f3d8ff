@@ -1,0 +1,561 @@
+---
+title: Building from Source
+description: Complete guide to building Balatro Mod Manager from source
+---
+
+## Prerequisites
+
+Before building Balatro Mod Manager, ensure you have the following tools installed:
+
+<CardGroup cols={2}>
+  <Card title="Required Tools" icon="wrench">
+    - [Rust](https://www.rust-lang.org/tools/install) - Backend compilation
+    - [Bun](https://bun.sh/) - Frontend package manager
+    - [Task](https://taskfile.dev/) - Task runner
+  </Card>
+  <Card title="Platform-Specific" icon="computer">
+    - **macOS**: Xcode Command Line Tools
+    - **Linux**: `flatpak-builder` for Flatpak builds
+    - **Windows**: MSVC build tools
+  </Card>
+</CardGroup>
+
+### Installing Task
+
+Task is the build automation tool used in this project:
+
+<CodeGroup>
+```bash macOS
+brew install go-task
+```
+
+```bash Arch Linux
+sudo pacman -S go-task
+```
+
+```bash Fedora
+sudo dnf install go-task
+```
+
+```bash Ubuntu/Debian
+# Via official script
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+# Or via Snap
+sudo snap install task --classic
+```
+
+```powershell Windows (Chocolatey)
+choco install go-task
+```
+
+```powershell Windows (Winget)
+winget install Task.Task
+```
+</CodeGroup>
+
+### Platform-Specific Setup
+
+<Steps>
+  <Step title="macOS - Rust Targets">
+    For universal binary builds, install both ARM and x86_64 targets:
+    
+    ```bash
+    rustup target add aarch64-apple-darwin
+    rustup target add x86_64-apple-darwin
+    ```
+  </Step>
+  <Step title="Linux - Flatpak Dependencies">
+    Install Flatpak and required runtimes:
+    
+    ```bash
+    # Install flatpak-builder
+    sudo apt install flatpak-builder  # Debian/Ubuntu
+    sudo dnf install flatpak-builder  # Fedora
+    sudo pacman -S flatpak-builder    # Arch
+    
+    # Install runtimes (GNOME 47 + toolchain extensions)
+    flatpak install org.gnome.Platform//47 org.gnome.Sdk//47 \
+      org.freedesktop.Sdk.Extension.node20//24.08 \
+      org.freedesktop.Sdk.Extension.rust-stable//24.08
+    ```
+  </Step>
+  <Step title="Windows - Build Tools">
+    Install Visual Studio Build Tools with C++ development tools:
+    
+    - Download from [Visual Studio Downloads](https://visualstudio.microsoft.com/downloads/)
+    - Select "Desktop development with C++" workload
+  </Step>
+</Steps>
+
+## Initial Setup
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/skyline69/balatro-mod-manager.git
+cd balatro-mod-manager
+```
+
+### Bootstrap Installation
+
+<Tip>
+  The `bootstrap` task installs all frontend and backend dependencies in one command:
+</Tip>
+
+```bash
+task bootstrap
+```
+
+This runs:
+- `bun install` - Installs frontend dependencies
+- `cargo fetch` - Downloads Rust dependencies
+
+### Manual Installation
+
+Alternatively, install dependencies separately:
+
+```bash
+# Install frontend dependencies
+bun install --allow-scripts
+
+# Fetch backend dependencies
+cd src-tauri && cargo fetch
+```
+
+## Development Builds
+
+### Desktop Development Server
+
+Start the full Tauri development server with hot-reload:
+
+```bash
+task debug
+# or
+task dev
+```
+
+This command:
+- Launches the Tauri application
+- Enables hot-reload for both frontend and backend
+- Opens DevTools automatically
+- Uses `cargo tauri dev` under the hood
+
+<Info>
+  **Prerequisites checked**: The task verifies `cargo` and `bun` are installed before running.
+</Info>
+
+### Web-Only Development
+
+For frontend-only development without Tauri:
+
+```bash
+task dev:web
+# or
+bun run dev
+```
+
+<Note>
+  This starts Vite dev server on `http://localhost:5173`. Tauri commands will not be available.
+</Note>
+
+### Linux Wayland Compatibility
+
+<Warning>
+  On Wayland sessions, the app defaults to X11 (XWayland) to avoid compositor protocol errors.
+</Warning>
+
+To force native Wayland:
+
+```bash
+BMM_ALLOW_WAYLAND=1 task debug
+```
+
+## Production Builds
+
+### Platform-Specific Builds
+
+Use the appropriate task for your platform:
+
+<CodeGroup>
+```bash Windows
+task release-windows
+```
+
+```bash macOS (Universal)
+task release-macos
+# Builds universal binary (ARM64 + x86_64)
+```
+
+```bash macOS (ARM64 only)
+task release-macos-arm
+# or
+task release-macos ARCH=arm64
+```
+
+```bash macOS (x86_64 only)
+task release-macos-x64
+# or
+task release-macos ARCH=x86_64
+```
+
+```bash Linux
+task release-linux
+```
+</CodeGroup>
+
+### Build Output Locations
+
+After building, find your artifacts here:
+
+<Steps>
+  <Step title="Windows">
+    **Location**: `src-tauri/target/x86_64-pc-windows-msvc/release/bundle/`
+    
+    **Files**:
+    - `nsis/Balatro.Mod.Manager_*_x64-setup.exe` - NSIS installer
+    - `msi/Balatro.Mod.Manager_*_x64_en-US.msi` - MSI installer
+  </Step>
+  <Step title="macOS">
+    **Location**: `src-tauri/target/universal-apple-darwin/release/bundle/` (or target-specific)
+    
+    **Files**:
+    - `dmg/Balatro.Mod.Manager_*_universal.dmg` - DMG installer
+    - `macos/Balatro Mod Manager.app` - Application bundle
+  </Step>
+  <Step title="Linux">
+    **Location**: `src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/`
+    
+    **Files**:
+    - `appimage/balatro-mod-manager_*_amd64.AppImage`
+    - `deb/balatro-mod-manager_*_amd64.deb`
+    - `rpm/balatro-mod-manager-*.x86_64.rpm`
+  </Step>
+</Steps>
+
+## Flatpak Builds (Linux)
+
+### Full Flatpak Workflow
+
+<Steps>
+  <Step title="Build Flatpak Repo">
+    ```bash
+    task flatpak:build
+    ```
+    
+    Creates a local Flatpak repository in `repo/` directory.
+  </Step>
+  <Step title="Create Bundle">
+    ```bash
+    task flatpak:bundle
+    ```
+    
+    Generates `balatro-mod-manager.flatpak` bundle file.
+  </Step>
+  <Step title="Install Bundle">
+    ```bash
+    task flatpak:install
+    ```
+    
+    Installs the bundle to your user profile.
+  </Step>
+  <Step title="Run Application">
+    ```bash
+    task flatpak:run
+    ```
+    
+    Launches the installed Flatpak app.
+  </Step>
+</Steps>
+
+### All-in-One Flatpak Build
+
+<Tip>
+  Run all Flatpak steps (build, bundle, install, run) with a single command:
+</Tip>
+
+```bash
+task flatpak:all
+```
+
+### Manual Flatpak Commands
+
+For more control, use the underlying Flatpak commands:
+
+```bash
+# Initialize repo (first time only)
+ostree init --mode=archive --repo=repo
+
+# Build and export to repo
+flatpak-builder --force-clean --repo=repo build-dir \
+  packaging/flatpak/io.balatro.ModManager.json
+
+# Create bundle
+flatpak build-bundle repo balatro-mod-manager.flatpak \
+  io.balatro.ModManager master
+
+# Install bundle
+flatpak install --user balatro-mod-manager.flatpak
+
+# Run
+flatpak run io.balatro.ModManager
+```
+
+### Flatpak Configuration
+
+<Info>
+  **Manifest location**: `packaging/flatpak/io.balatro.ModManager.json`
+  
+  **App ID**: `io.balatro.ModManager`
+</Info>
+
+## Testing & Validation
+
+### Full Check Suite
+
+Run all checks (typecheck, lint, format check, tests):
+
+```bash
+task check
+```
+
+This runs:
+1. `bun run check` - Frontend type checking
+2. `bun run lint` - Frontend linting (oxlint)
+3. `bun run test` - Frontend tests (Vitest)
+4. `cargo fmt --check` - Rust format verification
+5. `cargo clippy` - Rust linting
+6. `cargo test` - Rust tests (both crates)
+
+### Running Tests
+
+<Warning>
+  Tests must run with `--test-threads=1` to avoid SQLite database lock conflicts.
+</Warning>
+
+```bash
+# Test both Rust crates
+task test
+
+# Test specific crate
+cd src-tauri && cargo test -q -- --test-threads=1
+cd src-tauri/bmm-lib && cargo test -q -- --test-threads=1
+
+# Frontend tests
+bun run test
+bun run test:watch    # Watch mode
+bun run test:coverage # With coverage
+```
+
+### Formatting Code
+
+```bash
+# Format both Rust and frontend
+task fmt
+
+# Format Rust only
+task fmt-rust
+
+# Format frontend only
+task fmt-ui
+```
+
+## Dependency Management
+
+### Updating Dependencies
+
+<CodeGroup>
+```bash Update All
+task update-dependencies
+```
+
+```bash Frontend Only
+task update-frontend-deps
+# Runs: bun update
+```
+
+```bash Backend Only
+task update-backend-deps
+# Runs: cargo update && cargo upgrade
+```
+
+```bash Backend (Allow Incompatible)
+task update-backend-deps INCOMPATIBLE=true
+# Runs: cargo upgrade --incompatible
+```
+</CodeGroup>
+
+<Note>
+  Backend dependency updates require [cargo-edit](https://github.com/killercup/cargo-edit):
+  
+  ```bash
+  cargo install cargo-edit
+  ```
+</Note>
+
+## Cleaning Build Artifacts
+
+### Clean Rust Builds
+
+```bash
+task clean
+```
+
+Removes `target/` directories from both crates.
+
+### Clean Frontend Builds
+
+```bash
+task clean-ui
+```
+
+Removes `.svelte-kit/`, `build/`, and `dist/` directories.
+
+### Clean Flatpak Builds
+
+```bash
+task flatpak:clean
+```
+
+Removes `build-dir/`, `repo/`, and `balatro-mod-manager.flatpak`.
+
+### Clean Everything
+
+```bash
+task clean && task clean-ui && task flatpak:clean
+```
+
+## Automated Installation Scripts
+
+For quick setup on fresh systems:
+
+<CodeGroup>
+```powershell Windows (PowerShell)
+iwr https://raw.githubusercontent.com/skyline69/balatro-mod-manager/main/scripts/install.ps1 -useb | iex
+```
+
+```bash macOS
+curl -sL https://raw.githubusercontent.com/skyline69/balatro-mod-manager/main/scripts/install.sh | bash
+```
+
+```bash Linux (Local Checkout)
+./scripts/linux-install.sh
+```
+
+```bash Linux (Clone First)
+curl -sL https://raw.githubusercontent.com/skyline69/balatro-mod-manager/main/scripts/linux-install.sh | bash -s -- --clone
+```
+</CodeGroup>
+
+<Warning>
+  These scripts install prerequisites and build the application. Review the script contents before running.
+</Warning>
+
+## Debugging
+
+### Development Mode Debugging
+
+<Info>
+  DevTools open automatically in development mode on all platforms.
+</Info>
+
+Access debugging tools:
+- **Console**: View frontend logs and errors
+- **Network**: Monitor Tauri IPC calls
+- **Sources**: Debug TypeScript/Svelte code
+- **Tauri IPC**: Inspect `window.__TAURI__` and `invoke()` calls
+
+### Backend Logging
+
+Logs are configured in `src-tauri/bmm-lib/src/logging.rs` and stored in:
+
+<CodeGroup>
+```text Windows
+%APPDATA%/balatro-mod-manager/logs/
+```
+
+```text macOS
+~/Library/Application Support/balatro-mod-manager/logs/
+```
+
+```text Linux
+~/.local/share/balatro-mod-manager/logs/
+```
+</CodeGroup>
+
+### Database Inspection
+
+Inspect the SQLite database:
+
+```bash
+# Find database location
+# Windows: %APPDATA%/balatro-mod-manager/
+# macOS: ~/Library/Application Support/balatro-mod-manager/
+# Linux: ~/.local/share/balatro-mod-manager/
+
+# Open with sqlite3
+sqlite3 path/to/balatro-mod-manager/database.db
+
+# Or use a GUI tool like DB Browser for SQLite
+```
+
+## Troubleshooting
+
+### Common Issues
+
+<Warning>
+  **Issue**: `cargo tauri dev` fails to find `bun`
+  
+  **Solution**: Ensure Bun is in your PATH or install it: `curl -fsSL https://bun.sh/install | bash`
+</Warning>
+
+<Warning>
+  **Issue**: macOS build fails with "target not installed"
+  
+  **Solution**: Install required targets:
+  ```bash
+  rustup target add aarch64-apple-darwin x86_64-apple-darwin
+  ```
+</Warning>
+
+<Warning>
+  **Issue**: Linux build fails with Flatpak errors
+  
+  **Solution**: Ensure all runtimes are installed and up to date:
+  ```bash
+  flatpak update
+  ```
+</Warning>
+
+<Warning>
+  **Issue**: Tests fail with "database is locked"
+  
+  **Solution**: Always use `--test-threads=1` flag:
+  ```bash
+  cargo test -- --test-threads=1
+  ```
+</Warning>
+
+## Environment Variables
+
+| Variable | Purpose | Default |
+|----------|---------|--------|
+| `MACOSX_DEPLOYMENT_TARGET` | macOS minimum version | `11.0` |
+| `BMM_ALLOW_WAYLAND` | Enable Wayland on Linux | `0` (disabled) |
+| `APPLE_SIGNING_IDENTITY` | Code signing identity (macOS) | (none) |
+| `NO_STRIP` | Disable binary stripping (Linux) | `0` |
+
+## Production Signing (macOS)
+
+<Warning>
+  **Security**: Never commit signing identities or certificates to version control.
+</Warning>
+
+For signed macOS builds:
+
+```bash
+export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+task release-macos-production
+```
+
+Production releases use [SignPath](https://signpath.io) for code signing.

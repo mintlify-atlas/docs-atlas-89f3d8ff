@@ -1,0 +1,574 @@
+---
+title: "Linux Installation"
+description: "Complete guide to installing and configuring Balatro Mod Manager on Linux distributions"
+---
+
+## System Requirements
+
+- **Architecture**: x86_64 (64-bit)
+- **Balatro Version**: Steam version (native or via Proton)
+- **Display Server**: X11 or Wayland (X11 preferred)
+- **Dependencies**: Automatically handled by package format
+
+<Info>
+  **Flatpak is the recommended installation method** for the best compatibility across all Linux distributions.
+</Info>
+
+## Installation Methods
+
+### Flatpak (Recommended)
+
+Flatpak provides the most consistent experience across all distributions.
+
+<Steps>
+  <Step title="Install Flatpak (if not already installed)">
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt install flatpak
+    ```
+
+    ```bash Fedora
+    sudo dnf install flatpak
+    ```
+
+    ```bash Arch
+    sudo pacman -S flatpak
+    ```
+
+    ```bash openSUSE
+    sudo zypper install flatpak
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Add Flathub Repository">
+    ```bash
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    ```
+  </Step>
+
+  <Step title="Install Required Runtimes">
+    The Flatpak requires GNOME Platform 47 and SDK extensions:
+
+    ```bash
+    flatpak install flathub org.gnome.Platform//47 \
+                             org.gnome.Sdk//47 \
+                             org.freedesktop.Sdk.Extension.node20//24.08 \
+                             org.freedesktop.Sdk.Extension.rust-stable//24.08
+    ```
+  </Step>
+
+  <Step title="Install Balatro Mod Manager">
+    Download the `.flatpak` bundle from the [latest release](https://github.com/skyline69/balatro-mod-manager/releases/latest):
+
+    ```bash
+    flatpak install --user ~/Downloads/balatro-mod-manager.flatpak
+    ```
+
+    Or use the automated install script:
+    ```bash
+    curl -sL https://raw.githubusercontent.com/skyline69/balatro-mod-manager/main/scripts/linux-install.sh | bash
+    ```
+  </Step>
+
+  <Step title="Launch the Application">
+    ```bash
+    flatpak run io.balatro.ModManager
+    ```
+
+    Or find "Balatro Mod Manager" in your application launcher.
+  </Step>
+</Steps>
+
+### Arch Linux (AUR)
+
+For Arch-based distributions, install from the AUR:
+
+```bash
+# Using yay
+yay -S balatro-mod-manager-bin
+
+# Using paru
+paru -S balatro-mod-manager-bin
+
+# Using makepkg
+git clone https://aur.archlinux.org/balatro-mod-manager-bin.git
+cd balatro-mod-manager-bin
+makepkg -si
+```
+
+### Debian / Ubuntu
+
+Download and install the `.deb` package:
+
+```bash
+# Download from releases page
+wget https://github.com/skyline69/balatro-mod-manager/releases/latest/download/Balatro.Mod.Manager_*_amd64.deb
+
+# Install
+sudo apt install ./Balatro.Mod.Manager_*_amd64.deb
+```
+
+### AppImage (Universal)
+
+AppImage works on any Linux distribution:
+
+<Steps>
+  <Step title="Download AppImage">
+    ```bash
+    wget https://github.com/skyline69/balatro-mod-manager/releases/latest/download/Balatro.Mod.Manager_*_amd64.AppImage
+    ```
+  </Step>
+
+  <Step title="Make Executable">
+    ```bash
+    chmod +x Balatro.Mod.Manager_*_amd64.AppImage
+    ```
+  </Step>
+
+  <Step title="Run">
+    ```bash
+    ./Balatro.Mod.Manager_*_amd64.AppImage
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Integrate AppImage with your system using [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher).
+</Tip>
+
+### RPM-based Distributions
+
+For Fedora, RHEL, openSUSE:
+
+```bash
+# Download RPM
+wget https://github.com/skyline69/balatro-mod-manager/releases/latest/download/balatro-mod-manager-*.rpm
+
+# Fedora/RHEL
+sudo dnf install ./balatro-mod-manager-*.rpm
+
+# openSUSE
+sudo zypper install ./balatro-mod-manager-*.rpm
+```
+
+## File Locations
+
+### Balatro Installation Detection
+
+The mod manager searches for Balatro in multiple locations:
+
+#### Native Steam Installations
+
+```bash
+~/.local/share/Steam/steamapps/common/Balatro
+~/.steam/steam/steamapps/common/Balatro
+~/.steam/root/steamapps/common/Balatro
+~/.steam/debian-installation/steamapps/common/Balatro
+```
+
+#### Flatpak Steam
+
+```bash
+~/.var/app/com.valvesoftware.Steam/data/Steam/steamapps/common/Balatro
+~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Balatro
+```
+
+#### Snap Steam
+
+```bash
+~/snap/steam/common/.local/share/Steam/steamapps/common/Balatro
+```
+
+#### Additional Library Folders
+
+The manager also parses `libraryfolders.vdf` to discover custom Steam libraries and external drives mounted at `/run/media/$USER/`.
+
+<Note>
+  The detection algorithm scans up to **2000 directories** with a max depth of **5 levels** to find `steamapps` folders.
+</Note>
+
+### Application Data Directories
+
+| Installation Method | Configuration Path | Mods Path |
+|---------------------|-------------------|------------|
+| **Flatpak** | `~/.var/app/io.balatro.ModManager/config/Balatro/` | `~/.var/app/io.balatro.ModManager/config/Balatro/Mods/` |
+| **Native (AUR/Deb/RPM/AppImage)** | `~/.config/Balatro/` | `~/.config/Balatro/Mods/` |
+
+| Data Type | Location (Native) | Location (Flatpak) |
+|-----------|-------------------|--------------------|
+| **Database** | `~/.local/share/balatro-mod-manager/` | `~/.var/app/io.balatro.ModManager/data/balatro-mod-manager/` |
+| **Logs** | `~/.local/share/balatro-mod-manager/logs/` | `~/.var/app/io.balatro.ModManager/data/balatro-mod-manager/logs/` |
+| **Cache** | `~/.cache/balatro-mod-manager/` | `~/.var/app/io.balatro.ModManager/cache/balatro-mod-manager/` |
+
+### Flatpak Sandbox Permissions
+
+The Flatpak has access to:
+
+- **IPC**: Shared memory for display servers
+- **Network**: Download mods and thumbnails
+- **Display**: X11 and Wayland sockets
+- **Audio**: PulseAudio for Discord RPC
+- **GPU**: DRI access for hardware acceleration
+- **Filesystem**:
+  - `~/.config/Balatro` (Balatro config)
+  - `~/.local/share/Balatro` (Balatro data)
+  - `~/.local/share/Steam` (Steam library)
+  - `~/.steam` (Steam symlinks)
+  - `~/.var/app/com.valvesoftware.Steam` (Flatpak Steam)
+  - `~/snap/steam` (Snap Steam)
+  - `/run/media` (External drives)
+
+These permissions are defined in `packaging/flatpak/io.balatro.ModManager.json`.
+
+## Building from Source
+
+### Prerequisites
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt install curl git build-essential libssl-dev \
+                 libgtk-3-dev libayatana-appindicator3-dev \
+                 librsvg2-dev libwebkit2gtk-4.1-dev
+
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install Task
+sudo snap install task --classic
+# OR
+sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d
+
+# Install Tauri CLI
+cargo install tauri-cli --version "^2.9"
+
+# For Flatpak builds only
+sudo apt install flatpak flatpak-builder
+```
+
+```bash Fedora
+sudo dnf install curl git gcc gcc-c++ openssl-devel \
+                 gtk3-devel libappindicator-gtk3-devel \
+                 librsvg2-devel webkit2gtk4.1-devel
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl -fsSL https://bun.sh/install | bash
+
+sudo dnf install go-task
+cargo install tauri-cli --version "^2.9"
+
+# For Flatpak
+sudo dnf install flatpak flatpak-builder
+```
+
+```bash Arch
+sudo pacman -S curl git base-devel openssl gtk3 \
+               libappindicator-gtk3 librsvg webkit2gtk-4.1
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl -fsSL https://bun.sh/install | bash
+
+sudo pacman -S go-task
+cargo install tauri-cli --version "^2.9"
+
+# For Flatpak
+sudo pacman -S flatpak flatpak-builder
+```
+</CodeGroup>
+
+### Build Flatpak (Recommended)
+
+<Steps>
+  <Step title="Clone Repository">
+    ```bash
+    git clone https://github.com/skyline69/balatro-mod-manager.git
+    cd balatro-mod-manager
+    ```
+  </Step>
+
+  <Step title="Install Flatpak Runtimes">
+    ```bash
+    flatpak install org.gnome.Platform//47 org.gnome.Sdk//47 \
+      org.freedesktop.Sdk.Extension.node20//24.08 \
+      org.freedesktop.Sdk.Extension.rust-stable//24.08
+    ```
+  </Step>
+
+  <Step title="Build and Bundle">
+    ```bash
+    # Using Task (easiest)
+    task flatpak:all
+
+    # Or manually
+    task flatpak:build
+    task flatpak:bundle
+    task flatpak:install
+    ```
+  </Step>
+
+  <Step title="Run the App">
+    ```bash
+    flatpak run io.balatro.ModManager
+    ```
+  </Step>
+</Steps>
+
+Build artifacts:
+- **Flatpak repo**: `repo/`
+- **Bundle**: `balatro-mod-manager.flatpak`
+- **Secondary bundles**: `target/release/bundle/` (AppImage, Deb, RPM)
+
+### Build Native Package
+
+```bash
+git clone https://github.com/skyline69/balatro-mod-manager.git
+cd balatro-mod-manager
+bun install --allow-scripts
+
+# Build for Linux
+task release-linux
+```
+
+Built packages:
+```
+target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+```
+
+## Troubleshooting
+
+### Wayland Compositor Errors
+
+**Issue**: App crashes with "Wayland protocol error" or black screen
+
+**Solution**:
+
+By default, the app prefers X11 (via XWayland) to avoid compositor issues. If you want to force native Wayland:
+
+```bash
+export BMM_ALLOW_WAYLAND=1
+flatpak run io.balatro.ModManager
+```
+
+Or permanently set it:
+```bash
+flatpak override --user --env=BMM_ALLOW_WAYLAND=1 io.balatro.ModManager
+```
+
+To force X11 (default):
+```bash
+flatpak override --user --nosocket=wayland io.balatro.ModManager
+```
+
+### Steam Not Detected
+
+**Issue**: "Balatro installation not found"
+
+**Solution**:
+
+1. Verify Balatro is installed and launched at least once
+
+2. Check if Balatro exists in Steam directories:
+   ```bash
+   find ~/.local/share/Steam ~/.steam ~/.var/app/com.valvesoftware.Steam \
+        ~/snap/steam -name "Balatro" -type d 2>/dev/null
+   ```
+
+3. If using Flatpak Steam, ensure permissions:
+   ```bash
+   flatpak override --user --filesystem=home/.var/app/com.valvesoftware.Steam io.balatro.ModManager
+   ```
+
+4. Manually set path in Settings → Installation Path
+
+### Permission Denied Errors
+
+**Issue**: "Failed to create Mods directory" or "Permission denied"
+
+**Solution**:
+
+1. Fix ownership:
+   ```bash
+   sudo chown -R $USER:$USER ~/.config/Balatro ~/.local/share/balatro-mod-manager
+   ```
+
+2. Fix permissions:
+   ```bash
+   chmod -R u+rw ~/.config/Balatro ~/.local/share/balatro-mod-manager
+   ```
+
+3. For Flatpak, grant additional access:
+   ```bash
+   flatpak override --user --filesystem=xdg-config/Balatro:create io.balatro.ModManager
+   ```
+
+### Flatpak Build Fails
+
+**Issue**: "Failed to init: Unable to find runtime" or missing extensions
+
+**Solution**:
+
+1. Update Flatpak:
+   ```bash
+   flatpak update
+   ```
+
+2. Ensure Flathub remote is enabled:
+   ```bash
+   flatpak remote-list
+   flatpak remote-modify --user --enable flathub
+   ```
+
+3. Manually install runtimes:
+   ```bash
+   flatpak install flathub org.gnome.Platform//47 \
+                            org.gnome.Sdk//47 \
+                            org.freedesktop.Sdk.Extension.node20//24.08 \
+                            org.freedesktop.Sdk.Extension.rust-stable//24.08
+   ```
+
+### App Doesn't Launch (No Error)
+
+**Issue**: Clicking the app does nothing
+
+**Solution**:
+
+1. Run from terminal to see errors:
+   ```bash
+   # Flatpak
+   flatpak run io.balatro.ModManager
+
+   # Native
+   balatro-mod-manager
+   ```
+
+2. Check logs:
+   ```bash
+   # Flatpak
+   cat ~/.var/app/io.balatro.ModManager/data/balatro-mod-manager/logs/*.log
+
+   # Native
+   cat ~/.local/share/balatro-mod-manager/logs/*.log
+   ```
+
+3. Reset application data:
+   ```bash
+   # Flatpak
+   flatpak uninstall --delete-data io.balatro.ModManager
+   flatpak install --user balatro-mod-manager.flatpak
+
+   # Native
+   rm -rf ~/.local/share/balatro-mod-manager ~/.config/balatro-mod-manager
+   ```
+
+### Database Locked
+
+**Issue**: "Database is locked" when managing mods
+
+**Solution**:
+
+1. Close all instances:
+   ```bash
+   # Flatpak
+   flatpak kill io.balatro.ModManager
+
+   # Native
+   pkill -f balatro-mod-manager
+   ```
+
+2. Remove stale lock files:
+   ```bash
+   # Flatpak
+   rm ~/.var/app/io.balatro.ModManager/data/balatro-mod-manager/*.db-shm
+   rm ~/.var/app/io.balatro.ModManager/data/balatro-mod-manager/*.db-wal
+
+   # Native
+   rm ~/.local/share/balatro-mod-manager/*.db-shm
+   rm ~/.local/share/balatro-mod-manager/*.db-wal
+   ```
+
+## Advanced Configuration
+
+### Enable Debug Logging
+
+```bash
+# Flatpak
+flatpak run --env=RUST_LOG=debug io.balatro.ModManager
+
+# Native
+RUST_LOG=debug balatro-mod-manager
+```
+
+### Custom Proton Prefix
+
+If using a custom Proton prefix for Balatro:
+
+1. Find the prefix:
+   ```bash
+   find ~/.local/share/Steam/steamapps/compatdata -name "pfx" -type d
+   ```
+
+2. Set the Balatro path in Settings to:
+   ```
+   ~/.local/share/Steam/steamapps/compatdata/<APPID>/pfx/drive_c/Program Files (x86)/Steam/steamapps/common/Balatro
+   ```
+
+### Flatpak Permission Management
+
+View current permissions:
+```bash
+flatpak info --show-permissions io.balatro.ModManager
+```
+
+Grant additional filesystem access:
+```bash
+flatpak override --user --filesystem=/mnt/games io.balatro.ModManager
+```
+
+Reset to defaults:
+```bash
+flatpak override --user --reset io.balatro.ModManager
+```
+
+## Performance Tips
+
+- Use **native package** (AUR/Deb) instead of Flatpak for slightly better performance
+- Enable **GPU acceleration** if available
+- Disable **compositor effects** during mod installation for faster I/O
+- Use **XFS or ext4** filesystem for better SQLite performance than Btrfs
+- Close Steam while installing large mod collections
+
+## Uninstallation
+
+<CodeGroup>
+```bash Flatpak
+flatpak uninstall --delete-data io.balatro.ModManager
+rm -rf ~/.var/app/io.balatro.ModManager
+```
+
+```bash AUR
+yay -Rns balatro-mod-manager-bin
+rm -rf ~/.local/share/balatro-mod-manager ~/.config/balatro-mod-manager
+```
+
+```bash Debian/Ubuntu
+sudo apt remove balatro-mod-manager
+rm -rf ~/.local/share/balatro-mod-manager ~/.config/balatro-mod-manager
+```
+
+```bash AppImage
+rm ~/Balatro.Mod.Manager_*.AppImage
+rm -rf ~/.local/share/balatro-mod-manager ~/.config/balatro-mod-manager
+```
+</CodeGroup>
+
+## See Also
+
+- [Steam Deck Installation](/platform/steam-deck)
+- [Getting Started](/quickstart)
+- [Installing Mods](/guide/installing-mods)
+- [Troubleshooting Guide](/troubleshooting/common-issues)
